@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hundsun.boss.modules.charge.dao.bill.WrongBillDao">
+	<!-- 查询错单记录 -->
+	<select id="queryWrongBill" parameterType="com.hundsun.boss.modules.charge.form.bill.WrongBillForm"
+		resultType="com.hundsun.boss.modules.charge.form.bill.WrongBillForm">
+		SELECT 
+		  eg.id,
+		  eg.batch_no,
+		  eg.oc_date,
+		  eg.contract_id,
+		  eg.customer_id,
+		  eg.product_id,
+		  eg.fee_type,
+		  eg.wrong_reason,
+		  eg.wrong_status,
+		  DATE_FORMAT(
+		    eg.create_datetime,
+		    '%Y-%m-%d %H:%i:%S'
+		  ) AS create_datetime 
+		FROM
+		  charge_wrong eg 
+		  LEFT JOIN order_info ro 
+		    ON ro.contract_id = eg.contract_id
+		<where>
+			1=1
+			<if test="begin_date != null and begin_date != ''">
+    			<![CDATA[and oc_date >= #{begin_date}]]>
+			</if>
+			<if test="end_date != null and end_date != ''">
+    			<![CDATA[and oc_date <= #{end_date}]]>
+			</if>
+			<if test="contract_id != null and contract_id != ''">
+				and eg.contract_id =#{contract_id}
+			</if>
+			<if test="customer_id != null and customer_id != ''">
+				and eg.customer_id =#{customer_id}
+			</if>
+			<if test="product_id != null and product_id != ''">
+				and product_id =#{product_id}
+			</if>
+			<if test="fee_type != null and fee_type != ''">
+				and fee_type =#{fee_type}
+			</if>
+			<if test="wrong_reason != null and wrong_reason != '' and wrong_reason != 0">
+				<if test="wrong_reason == 1">
+					and wrong_reason like concat('%', '客户号','%')
+				</if>
+				<if test="wrong_reason == 2">
+					and wrong_reason like concat('%', '合同号','%')
+				</if>
+				<if test="wrong_reason == 3">
+					and wrong_reason like concat('%', '客户号合同号','%')
+				</if>
+			</if>
+			<if test="wrong_status != null and wrong_status != '' and wrong_status != 0">
+				and wrong_status =#{wrong_status}-1
+			</if>
+			<if test="office_id !=null and office_id !='' ">   
+          		and ro.office_id = #{office_id}
+        	</if>
+	        <if test="dept !=null and dept !='' ">   
+	        	and ro.office_id in (${dept}) 
+	        </if>
+			order by create_datetime desc
+		</where>
+	</select>
+	<!-- 关闭错单 -->
+	<update id="updateStatus" parameterType="com.hundsun.boss.modules.charge.form.bill.WrongBillForm">
+		update charge_wrong
+		set
+		wrong_status = 1
+		where id = #{id}
+	</update>
+
+</mapper>

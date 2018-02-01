@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hundsun.boss.modules.sys.dao.SysConfigMybatisDao">
+    
+    <select id="getReportCongfig"
+   		parameterType="java.lang.String" 
+   		resultType="com.hundsun.boss.modules.sys.entity.ReportConfig">
+   		SELECT 
+		  config_key,
+		  file_type,
+		  template,
+		  file_name,
+		  template_content,
+		  service,
+		  Permission
+		FROM
+		  report_config_xml
+		WHERE 1=1
+   		<if test="_parameter != null and _parameter != '' ">
+			and config_key = #{_parameter}
+		</if>
+   	</select>
+   	
+   	<select id="getCustomizeBillTemplateConfig"
+   		parameterType="java.lang.String" 
+   		resultType="com.hundsun.boss.modules.sys.entity.ReportConfig">
+   		SELECT 
+		  config_key,
+		  file_type,
+		  template,
+		  file_name,
+		  template_content,
+		  service,
+		  Permission,
+		  contract_id
+		FROM
+		  report_config_xml
+		WHERE 1=1
+   		<if test="_parameter != null and _parameter != '' ">
+			and contract_id = #{_parameter}
+		</if>
+   	</select>
+   	
+   	<select id="getMailCongfig"
+   		parameterType="java.util.Map" 
+   		resultType="com.hundsun.boss.common.mail.MailConfig">
+   		SELECT 
+		  *
+		FROM
+		  mail_config_xml
+		WHERE 1=1
+   		<if test="office_id != null and office_id != '' ">
+			and office_id = #{office_id}
+		</if>
+		<if test="id != null and id != '' ">
+			and id = #{id}
+		</if>
+		<if test="dept != null and dept != '' ">
+		    AND office_id in (${dept}) 
+		</if>
+		<if test="mail_type != null and mail_type != '' ">
+		    AND mail_type = #{mail_type}
+		</if>
+   	</select>
+   	
+   	<select id="getValue" 
+		parameterType="java.lang.String"
+		resultType="java.lang.String">
+		select 
+			prop_code 
+		from 
+			tsys_config
+		where 1=1
+		<if test="_parameter != null and _parameter !=''">
+	 		AND prop_name = #{_parameter} 
+	 	</if>
+	</select>
+	
+</mapper>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<columns>
+	<column header="批次号" type="string" field="bill_id"/>
+	<column header="协同合同编号" type="string" field="hs_contract_id"/>
+	<column header="合同计费开始时间" type="string" field="order_begin_date" />
+	<column header="合同计费结束时间" type="string" field="order_end_date" />
+	<column header="协同客户编号" type="string" field="hs_user_id" />
+	<column header="客户名称" type="string" field="customer_name" />
+	<column header="本期技术服务费" type="number" field="tech_service_fare" format="#,##0.########"/>
+	<column header="本期调账金额" type="number" field="adjust_amt" format="#,##0.########"/>
+	<column header="本期到款" type="number" field="amount_receivable" format="#,##0.########"/>
+	<column header="季度累计技术服务费" type="number" field="season_paid" format="#,##0.########"/>
+	<column header="本期应付" type="number" field="payable" format="#,##0.########"/>
+	<column header="累计技术服务费" type="number" field="total_tech_service_fare" format="#,##0.########"/>
+	<column header="累计到款" type="number" field="total_receive" format="#,##0.########"/>
+	<column header="累计调账金额" type="number" field="total_adjust_amt" format="#,##0.########"/>
+	<column header="累计保底预付" type="number" field="total_advance_tech_service_fare" format="#,##0.########"/>
+	<column header="发送状态" type="string" field="send_status"/>
+</columns>

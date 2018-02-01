@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper
+	namespace="com.hundsun.boss.modules.charge.dao.report.OrderAdvPaymentMyBatisDao">
+	<!-- 获取二维表格式的中间表数据 -->
+	<select id="list"
+		parameterType="com.hundsun.boss.modules.charge.form.common.SearchForm"
+		resultType="com.hundsun.boss.modules.charge.entity.report.OrderAdvPayment">
+			SELECT 
+			  ro.office_id,
+			  ro.customer_id,
+			  vrf.chinesename customer_name,
+			  rvt.contract_id,
+			  rt.product_ids,
+			  rt.product_names,
+			  st.label payment_type,
+			  rvt.display_date,
+			  rvt.amount 
+			FROM
+			  order_adv_payment rvt 
+			  LEFT JOIN sys_dict st 
+			    ON st.type = 'payment_type' 
+			    AND st.value = rvt.payment_type,
+			  (SELECT 
+			    combine_id,
+			    GROUP_CONCAT(rt.product_id) product_ids,
+			    GROUP_CONCAT(rt.product_name) product_names 
+			  FROM
+			    order_product rt 
+			  WHERE rt.del_flag = '0'
+			  GROUP BY rt.combine_id) rt,
+			  order_info ro,
+			  v_customer_jf vrf
+			WHERE rvt.contract_id IS NOT NULL 
+			  AND rvt.del_flag = '0' 
+			  AND rt.combine_id = rvt.combine_id 
+			  AND ro.contract_id = rvt.contract_id 
+			  AND vrf.customerid = ro.customer_id 
+			<if test="charge_begin_month != null and charge_begin_month !=''">
+			  AND DATE_FORMAT(display_date, '%Y%m') >= #{charge_begin_month}
+			</if>
+			<if test="charge_end_month != null and charge_end_month !=''">
+			<![CDATA[ 
+			  AND DATE_FORMAT(display_date, '%Y%m') <= #{charge_end_month}
+			  ]]>
+			</if>
+			<if test="contract_id != null and contract_id !=''">
+			   AND rvt.contract_id = #{contract_id}
+			</if>
+			<if test="office_id != null and office_id !=''">
+			   AND ro.office_id = #{office_id}
+			</if>
+			<if test="dept != null and dept != '' ">
+		       AND ro.office_id in (${dept}) 
+			</if>
+			 ORDER BY rvt.display_date DESC,
+					  ro.office_id,
+					  rvt.contract_id 
+	</select>
+</mapper>

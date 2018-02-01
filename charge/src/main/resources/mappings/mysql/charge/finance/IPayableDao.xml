@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hundsun.boss.modules.charge.dao.finance.PayableDao">
+	<!--应收款列表.-->
+	<select id="payableList"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm"
+		resultType="java.util.Map">
+			 <![CDATA[
+				SELECT 
+				  vtf.companyname,
+				  vtf.companyid AS office_id,
+				  vtf.customerid AS customer_id,
+				  vtf.customername AS user_name,
+				  U.contract_id,
+				  ro.order_begin_date,
+				  ro.order_end_date,
+				  MAX(U.payable) AS 'current_pay',
+				  MAX(U.season_charge) AS 'season_pay',
+				  MAX(U.total_receive) AS 'total_receive',
+				  MAX(U.total_receive) + MAX(U.payable) AS 'total_pay',
+				  MAX(U.total_finance_income) AS 'total_confirm_income',
+				  MAX(U.total_finance_income) - MAX(U.total_receive) AS 'total_confirm_pay',
+				  vtf.evaluatname AS audit_employee_name,
+				  vtf.evaluatbranch AS audit_branch_name,
+				  (
+				    CASE
+				      WHEN ro.payment_cycle = '0' 
+				      THEN '按自然季度结算' 
+				      WHEN ro.payment_cycle = '1' 
+				      THEN '按月结算' 
+				      WHEN ro.payment_cycle = '2' 
+				      THEN '按季度结算' 
+				      WHEN ro.payment_cycle = '3' 
+				      THEN '按年结算' 
+				    END
+				  ) AS payment_cycle 
+				FROM
+				  (SELECT 
+				    contract_id,
+				    total_finance_income,
+				    0 AS payable,
+				    0 AS season_charge,
+				    0 AS total_receive 
+				  FROM
+				    (SELECT 
+				      contract_id,
+				      MAX(total_finance_income) AS total_finance_income 
+				    FROM
+				      (SELECT 
+				        contract_id,
+				        DATE_FORMAT(charge_begin_date, '%Y%m') charge_month,
+				        SUM(total_finance_income) total_finance_income 
+				      FROM
+				        charge_income_interface 
+				      GROUP BY contract_id,
+				        DATE_FORMAT(charge_begin_date, '%Y%m')) t 
+				    WHERE charge_month < #{charge_month}
+				    GROUP BY contract_id) A 
+				  UNION
+				  ALL 
+				  SELECT 
+				    ero.contract_id,
+				    0,
+				    IFNULL(ero.payable, 0) - IFNULL(
+				      (SELECT 
+				        SUM(IFNULL(bankreceipt_amount, 0)) 
+				      FROM
+				        charge_bankreceipt 
+				      WHERE contract_id = ero.contract_id 
+				        AND DATE_FORMAT(bankreceipt_month, '%Y%m') > DATE_FORMAT(ero.bill_display_date, '%Y%m') 
+				        AND DATE_FORMAT(bankreceipt_month, '%Y%m') <= #{charge_month}),
+				      0
+				    ) AS payable,
+				    0,
+				    0 
+				  FROM
+				    charge_order_info ero,
+				    (SELECT 
+				      MAX(bill_id) bill_id 
+				    FROM
+				      charge_order_info 
+				    WHERE 1 = 1 
+				      AND DATE_FORMAT(bill_display_date, '%Y%m') < #{charge_month}
+				    GROUP BY contract_id) bill 
+				  WHERE ero.bill_id = bill.bill_id 
+				  UNION
+				  ALL 
+				  SELECT 
+				    contract_id,
+				    0,
+				    0,
+				    0,
+				    SUM(IFNULL(bankreceipt_amount, 0)) AS total_receive 
+				  FROM
+				    charge_bankreceipt 
+				  WHERE DATE_FORMAT(bankreceipt_month, '%Y%m') <= #{charge_month}
+				  GROUP BY contract_id 
+				  UNION
+				  ALL 
+				  SELECT 
+					  elo.contract_id AS contract_id,
+					  0,
+					  0,
+					  (
+					    CASE
+					      WHEN V.payment_cycle IN ('0', '2') 
+					      THEN IFNULL(ero.payable, 0) - IFNULL(
+					        (SELECT 
+					          SUM(cb.bankreceipt_amount) 
+					        FROM
+					          charge_bankreceipt cb 
+					        WHERE cb.contract_id = elo.contract_id 
+					          AND DATE_FORMAT(bankreceipt_month, '%Y%m') > DATE_FORMAT(elo.charge_end_date, '%Y%m') 
+					          AND DATE_FORMAT(bankreceipt_month, '%Y%m') <= #{charge_month}),
+					        0
+					      ) 
+					      ELSE 0 
+					    END
+					  ) AS season_charge,
+					  0 
+					FROM
+					  charge_order_info ero,
+					  charge_bill_info elo,
+					  (SELECT 
+					    (
+					      CASE
+					        WHEN sro.payment_cycle = '0' 
+					        THEN MAX(elo.bill_id) 
+					        ELSE MAX(
+					          CASE
+					            WHEN fun_get_month_diff (
+					              charge_begin_date,
+					              fun_get_yearly_begin_date (
+					                charge_begin_date,
+					                prod_begin_date
+					              )
+					            ) = 3 
+					            THEN elo.bill_id 
+					            WHEN fun_get_month_diff (
+					              charge_begin_date,
+					              fun_get_yearly_begin_date (
+					                charge_begin_date,
+					                prod_begin_date
+					              )
+					            ) % 3 = 0 
+					            THEN elo.bill_id 
+					            WHEN fun_get_month_diff (
+					              charge_begin_date,
+					              fun_get_yearly_begin_date (
+					                charge_begin_date,
+					                prod_begin_date
+					              )
+					            ) = 13 
+					            THEN elo.bill_id 
+					            WHEN charge_end_date = prod_end_date 
+					            AND fun_get_month_diff (
+					              charge_begin_date,
+					              fun_get_yearly_begin_date (
+					                charge_begin_date,
+					                prod_begin_date
+					              )
+					            ) < 3 
+					            THEN elo.bill_id 
+					            WHEN charge_end_date = prod_end_date 
+					            AND fun_get_month_diff (
+					              charge_begin_date,
+					              fun_get_yearly_begin_date (
+					                charge_begin_date,
+					                prod_begin_date
+					              )
+					            ) > 3 
+					            THEN elo.bill_id 
+					            ELSE '' 
+					          END
+					        ) 
+					      END
+					    ) bill_id,
+					    sro.payment_cycle 
+					  FROM
+					    charge_bill_info elo,
+					    ss_order_info sro 
+					  WHERE DATE_FORMAT(charge_end_date, '%Y%m') < #{charge_month} 
+					    AND belong_type = '1' 
+					    AND DATE_FORMAT(charge_end_date, '%m') IN ('03', '06', '09', '12') 
+					    AND sro.bill_id = elo.bill_id 
+					    AND sro.del_flag = '0' 
+					    AND elo.belong_type = '1' 
+					  GROUP BY elo.contract_id) V 
+					WHERE elo.bill_id = ero.bill_id 
+					  AND elo.belong_type = '1' 
+					  AND ero.bill_id = V.bill_id 
+					GROUP BY ero.contract_id ) U 
+				  INNER JOIN order_info ro 
+				    ON ro.contract_id = U.contract_id,
+				  v_contract_jf vtf 
+				WHERE 1 = 1 
+				  AND vtf.contractid = U.contract_id 
+				  AND vtf.contractid IS NOT NULL 		
+			 ]]>
+			<if test="contract_id != null and contract_id != ''"> 
+				  AND U.contract_id = #{contract_id}  
+			</if>
+			<if test="customer_id != null and customer_id != ''"> 
+				  AND vtf.customerid = #{customer_id}  
+			</if>
+			<if test="audit_employee_name != null and audit_employee_name != ''"> 
+				  AND vtf.evaluatname = #{audit_employee_name}  
+			</if>
+			<if test="audit_branch_name != null and audit_branch_name != ''"> 
+				  AND vtf.evaluatbranch = #{audit_branch_name}  
+			</if>
+			<if test="user_name != null and user_name != ''"> 
+				  AND vtf.customername LIKE CONCAT('%', #{user_name},'%')
+			</if>
+			<if test="office_id !=null and office_id !='' ">   
+          		  AND vtf.companyid in (${office_id}) 
+        	</if>
+        	<if test="dept !=null and dept !='' ">   
+          		and vtf.companyid in (${dept}) 
+        	</if>
+		 	GROUP BY U.contract_id 
+		 	ORDER BY MAX(U.payable) DESC, MAX(U.season_charge) DESC
+	</select>
+	
+</mapper>

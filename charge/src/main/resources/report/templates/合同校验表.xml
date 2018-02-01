@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<columns>
+	<column header="所属部门" type="string" field="department"/>
+	<column header="校验类型" type="string" field="hs_check_status" />
+	<column header="协同合同编号" type="string" field="hs_contract_id" />
+	<column header="协同销售产品编号" type="string" field="hs_product_id" />
+	<column header="产品名称" type="string" field="product_name" />
+	<column header="校验级别" type="string" field="belong_type" />
+	<column header="校验信息" type="string" field="reason" />
+	<column header="显示状态" type="string" field="show_status" />
+	<column header="备注" type="string" field="remark" />
+</columns>

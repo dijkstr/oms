@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hundsun.boss.modules.charge.dao.common.SysConfigDao">
+    
+    <select id="getReportCongfig"
+   		parameterType="java.lang.String" 
+   		resultType="com.hundsun.boss.modules.charge.entity.setting.ReportConfig">
+   		SELECT 
+		  config_key,
+		  file_type,
+		  template,
+		  file_name,
+		  template_content,
+		  service,
+		  Permission
+		FROM
+		  report_config_xml
+		WHERE 1=1
+   		<if test="_parameter != null and _parameter != '' ">
+			and config_key = #{_parameter}
+		</if>
+   	</select>
+   	
+   	<select id="getMailCongfig"
+   		parameterType="java.lang.String" 
+   		resultType="com.hundsun.boss.common.MailConfig">
+   		SELECT 
+		  smtpauth,
+		  smtphost,
+		  smtpport,
+		  smtpsender,
+		  bcc,
+		  smtpuser,
+		  smtppassword,
+		  template,
+		  mail_subject,
+		  mail_content
+		FROM
+		  mail_config_xml
+		WHERE 1=1
+   		<if test="_parameter != null and _parameter != '' ">
+			and office_id = #{_parameter}
+		</if>
+   	</select>
+   	
+   	<select id="getValue" 
+		parameterType="java.lang.String"
+		resultType="java.lang.String">
+		select 
+			prop_code 
+		from 
+			tsys_config
+		where 1=1
+		<if test="_parameter != null and _parameter !=''">
+	 		AND prop_name = #{_parameter} 
+	 	</if>
+	</select>
+	
+	<select id="getOrderSource" parameterType="com.hundsun.boss.modules.charge.form.bill.DownloadForm" resultType="java.util.Map">
+		SELECT 
+		  sro.office_id,
+		  vtf.dept_name 
+		FROM
+		  ss_order_info sro 
+		  LEFT JOIN v_department_jf vtf 
+		    ON sro.office_id = vtf.hs_dept_id 
+		WHERE 1 = 1
+		AND vtf.dept_name IS NOT NULL
+		AND sro.del_flag = '0'
+		<if test="dept != null and dept != ''">  
+			AND sro.office_id in (${dept})
+		</if>
+		GROUP BY sro.office_id 
+	</select>
+
+	<select id="getBillIds" parameterType="com.hundsun.boss.modules.charge.form.bill.DownloadForm" resultType="java.util.Map">
+		SELECT 
+		  sro.bill_id 
+		FROM
+		  charge_bill_info elo,
+		  ss_order_info sro 
+		  LEFT JOIN v_customer_jf vrf 
+		    ON vrf.customerid = sro.customer_id 
+		WHERE elo.bill_id = sro.bill_id 
+		  AND elo.belong_type = '1' 
+		  AND sro.del_flag = '0'
+		  AND sro.office_id = #{office_id} 
+		<if test="charge_begin_month != null and charge_begin_month != ''">  
+		  <![CDATA[AND DATE_FORMAT(elo.charge_begin_date, '%Y%m') >= #{charge_begin_month}]]>
+		</if>
+		<if test="charge_end_month != null and charge_end_month != ''">  
+		  <![CDATA[AND DATE_FORMAT(elo.charge_end_date, '%Y%m') <= #{charge_end_month}]]>
+		</if>
+	</select>
+
+	<select id="getSalers" parameterType="com.hundsun.boss.modules.charge.form.bill.DownloadForm" resultType="java.util.Map">
+		SELECT 
+		  sro.bill_id,
+		  vrf.customermanagername 
+		FROM
+		  charge_bill_info elo,
+		  ss_order_info sro 
+		  LEFT JOIN v_customer_jf vrf 
+		    ON vrf.customerid = sro.customer_id 
+		WHERE elo.bill_id = sro.bill_id 
+		  AND elo.belong_type = '1' 
+		  AND sro.del_flag = '0'
+		  AND sro.office_id = #{office_id} 
+		<if test="charge_begin_month != null and charge_begin_month != ''">  
+		  <![CDATA[AND DATE_FORMAT(elo.charge_begin_date, '%Y%m') >= #{charge_begin_month}]]>
+		</if>
+		<if test="charge_end_month != null and charge_end_month != ''">  
+		  <![CDATA[AND DATE_FORMAT(elo.charge_end_date, '%Y%m') <= #{charge_end_month}]]>
+		</if>
+	</select>
+	
+	<select id="queryOrderRelationList"
+		parameterType="java.util.Map"
+		resultType="java.util.Map">
+		select
+			a.id,
+			a.contract_id,
+			a.relation_name,
+			a.mobile_tel,
+			a.relation_tel,
+			a.email,
+			a.duties
+		from order_relation a
+		<where>
+			a.contract_id = #{contract_id}
+		</where>
+	</select>
+	
+</mapper>

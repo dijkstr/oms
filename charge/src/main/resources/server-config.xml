@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<server>
+	<connector port="8080" protocol="HTTP/1.1" socketTimeOut="5000000" poolSize="10" backLog="10"/>
+	<services>
+		<service name="收入预测" token="12345" interfaceNo="cbif0003" cacheUrl="http://127.0.0.1:8088/charge"/>
+	</services>
+</server>

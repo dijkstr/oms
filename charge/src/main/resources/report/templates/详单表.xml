@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<columns>
+	<column header="账单编号" type="string" field="bill_id"/>
+	<column header="批次号" type="string" field="batch_no" />
+	<column header="发生日期" type="string" field="charge_begin_time" />
+	<column header="协同客户编号" type="string" field="hs_user_id" />
+	<column header="客户名称" type="string" field="user_name" />
+	<column header="订单编号" type="string" field="order_id" />
+	<column header="组合编号" type="string" field="combine_id" />
+	<column header="产品编号" type="string" field="product_id" />
+	<column header="计费模式编号" type="string" field="feemodel_id" />
+	<column header="计费模式名称" type="string" field="feemodel_name" />
+	<column header="协同合同号" type="string" field="contract_id" />
+	<column header="协同产品编号" type="string" field="hs_product_id" />
+	<column header="费率" type="number" field="fee_ratio" format="#,##0.########"/>
+	<column header="计费金额" type="number" field="charge_amt" format="#,##0.########"/>
+	<column header="技术服务费" type="number" field="tech_service_fare" format="#,##0.########"/>
+	<column header="业务数据" type="number" field="business_balance" format="#,##0.########"/>
+</columns>

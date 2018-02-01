@@ -1,0 +1,920 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hundsun.boss.modules.charge.dao.bill.ChargeBillDao" >
+	<select id="getBillConsume"
+   		parameterType="com.hundsun.boss.modules.charge.form.bill.ChargeBillSearchForm"
+   		resultType="com.hundsun.boss.modules.charge.form.bill.ChargeBillInfo">
+   		SELECT 
+		  elo.bill_id,
+		  (
+		    CASE
+		      WHEN srl.min_type = '3' 
+		      THEN 
+		      (SELECT 
+		        MAX(IFNULL(charge_amt, 0)) 
+		      FROM
+		        charge_receipt 
+		      WHERE bill_id = elo.bill_id) 
+		      WHEN srl.min_type = '2' 
+		      THEN SUM(IFNULL(charge_amt, 0)) 
+		      ELSE 
+		      (SELECT 
+		        SUM(IFNULL(charge_amt, 0)) 
+		      FROM
+		        charge_bill_info 
+		      WHERE contract_id = elo.contract_id 
+		        AND belong_type = '2' 
+		        <![CDATA[ AND charge_end_date <= elo.charge_end_date ]]>
+		        AND charge_end_date >= elo.prod_begin_date) 
+		    END
+		  ) AS charge_amt,
+		  MAX(srl.min_type) AS min_type,
+		  MIN(IFNULL(srl.min_consume, 0)) AS min_consume 
+		FROM
+		  charge_bill_info elo,
+		  ss_order_model srl 
+		WHERE elo.bill_id = srl.bill_id 
+		  AND elo.belong_type = '2' 
+		  AND elo.combine_id = srl.ref_id 
+		  <if test="bill_id != null and bill_id != '' ">
+			AND elo.bill_id = #{bill_id}
+		  </if>
+		GROUP BY elo.bill_id 
+   	</select>
+   	
+	<select id="getBillAccount"
+   		parameterType="com.hundsun.boss.modules.charge.form.bill.ChargeBillSearchForm"
+   		resultType="com.hundsun.boss.modules.charge.form.bill.ChargeBillForm">
+   		SELECT 
+		  sro.office_id,
+		  sro.contract_id,
+		  sro.customer_id,
+		  vrf.chinesename user_name,
+		  vm.email as cm_email,
+		  sro.is_send,
+		  elo.charge_begin_date,
+		  elo.charge_end_date,
+		  lgl.mail_subject,
+		  ero.check_status,
+		  ero.cc_flag,
+		  ROUND(IFNULL(ero.payable, 0), 2) payable
+		FROM
+		  ss_order_info sro
+		  LEFT JOIN v_customer_jf vrf 
+    		ON vrf.customerid = sro.customer_id
+    	  LEFT JOIN v_manager_jf vm
+    	  	ON vm.customermanagerno = vrf.customermanagerno
+    	  LEFT JOIN mail_config_xml lgl
+    	  	ON lgl.office_id = sro.office_id
+    	   AND lgl.mail_type = '0',
+		  charge_bill_info elo
+		  LEFT JOIN charge_order_info ero
+		  	ON ero.bill_id = elo.bill_id
+		WHERE elo.bill_id = sro.bill_id 
+		  AND elo.belong_type = '1' 
+		  AND sro.del_flag = '0'
+   		<if test="bill_id != null and bill_id != '' ">
+			and sro.bill_id = #{bill_id}
+		</if>
+   	</select>
+   	
+   	<select id="queryChargeBillList"
+   		parameterType="com.hundsun.boss.modules.charge.form.bill.ChargeBillSearchForm"
+   		resultType="com.hundsun.boss.modules.charge.form.bill.ChargeBillForm">
+   		SELECT 
+		  sro.office_id,
+		  sro.contract_id,
+		  sro.customer_id,
+		  vrf.chinesename user_name,
+		  elo.charge_begin_date,
+		  elo.charge_end_date,
+		  ero.bill_id,
+		  elo.service_charge,
+		  ero.receivable,
+		  ero.adjust_amt,
+		  ero.payable,
+		  (CASE WHEN ero.check_status = '1' THEN '已审核通过' ELSE '未审核通过' END) AS check_status,
+		  (CASE WHEN ero.send_status = '1' THEN '已发送' ELSE '未发送' END) AS send_status,
+		  IFNULL((SELECT 
+		    SUM(charge_amt) 
+		  FROM
+		    charge_bill_info cbi 
+		  WHERE cbi.belong_type = '2' 
+		    AND cbi.bill_id = elo.bill_id), 0) charge_amt 
+		FROM
+		  charge_order_info ero,
+		  charge_bill_info elo,
+		  ss_order_info sro 
+		  LEFT JOIN v_customer_jf vrf 
+		    ON vrf.customerid = sro.customer_id 
+		WHERE elo.bill_id = ero.bill_id 
+		  AND elo.belong_type = '1' 
+		  AND sro.del_flag = '0'
+		  AND sro.bill_id = ero.bill_id
+		<include refid="charge_bill_criteria" />
+		ORDER BY elo.bill_id desc
+   	</select>
+   	
+   	<select id="getBillIdForAccountReceipt"
+   		parameterType="com.hundsun.boss.modules.charge.form.bill.ChargeBillSearchForm"
+   		resultType="java.util.Map">
+   		SELECT DISTINCT
+		  ero.bill_id,
+		  ero.contract_id
+		FROM
+		  charge_order_info ero,
+		  charge_bill_info elo,
+		  ss_order_info sro
+		  LEFT JOIN v_customer_jf vrf 
+		    ON vrf.customerid = sro.customer_id 
+		WHERE elo.bill_id = ero.bill_id 
+		  AND sro.bill_id = ero.bill_id 
+		  AND sro.del_flag = '0'
+   		<include refid="charge_bill_criteria" />
+   		ORDER BY elo.contract_id, 
+   		         elo.charge_begin_date, 
+   		         elo.belong_type desc 
+   	</select>
+   	
+   	<sql id="charge_bill_criteria">
+   		<if test="send_status != null and send_status != '' ">
+		  AND ero.send_status =#{send_status}
+		</if>
+		<if test="charge_off != null and charge_off != '' ">
+		  AND elo.charge_off = #{charge_off}
+		</if>
+		<if test="user_name != null and user_name != '' ">
+		  AND vrf.chinesename like CONCAT('%', #{user_name},'%')
+		</if>
+   		<if test="charge_begin_month != null and charge_begin_month != '' ">  
+		   AND DATE_FORMAT(elo.charge_begin_date, '%Y%m') >= #{charge_begin_month}
+		</if>
+		<if test="charge_end_month != null and charge_end_month != ''"> 
+  		<![CDATA[ AND DATE_FORMAT(elo.charge_end_date, '%Y%m') <= #{charge_end_month} ]]>
+		</if>
+		<if test="contract_id !=null and contract_id !='' ">   
+          and sro.contract_id like CONCAT('%', #{contract_id},'%')
+        </if> 
+         <if test="bill_id !=null and bill_id !='' ">   
+          and elo.bill_id = #{bill_id}
+        </if>
+        <if test="customer_id !=null and customer_id !='' ">   
+          and sro.customer_id = #{customer_id}
+        </if>
+        <if test="office_id !=null and office_id !='' ">   
+          and sro.office_id = #{office_id}
+        </if>
+        <if test="dept !=null and dept !='' ">   
+          and sro.office_id in (${dept}) 
+        </if>
+   	</sql>
+   	
+   	<select id="accountReceitp" parameterType="java.util.Map">
+   		CALL sp_charge_account_combine(#{bill_id});
+   	</select>
+   	
+   	<select id="accountBill" parameterType="java.util.Map">
+   		CALL sp_charge_account_bill(#{bill_id});
+   	</select>
+   	
+   	<select id="genChargeWrong" parameterType="java.util.Map">
+   		CALL sp_gen_charge_wrong(#{batch_no});
+   	</select>
+   	
+   	<select id="chargeDeleteOldRecord" parameterType="java.util.Map">
+   		CALL sp_charge_delete_old_record(#{batch_no});
+   	</select>
+   	
+   	<select id="genChargeSnapshot" parameterType="java.util.Map">
+   		CALL sp_gen_charge_snapshot(#{batch_no});
+   	</select>
+   	
+   	<select id="genChargeFee" parameterType="java.util.Map">
+   		CALL sp_gen_charge_fee(#{batch_no});
+   	</select>
+   	
+   	<select id="financeDetail" parameterType="java.util.Map">
+   		CALL sp_finance_detail(#{contract_id});
+   	</select>
+   	<select id="countYearlyProductIncome" parameterType="java.util.Map">
+   		CALL sp_count_yearly_product_income(#{until_month}, #{contract_id});
+   	</select>
+   	<select id="countYearlyContractIncome" parameterType="java.util.Map">
+   		CALL sp_count_yearly_contract_income(#{until_month}, #{contract_id});
+   	</select>
+   	
+   	<select id="getSSChargeModel"
+		parameterType="com.hundsun.boss.modules.charge.form.bill.OrderModelForm"
+		resultType="com.hundsun.boss.modules.charge.form.bill.OrderModelForm">
+		SELECT 
+		  <if test = "bill_id != null and bill_id !=''"> 
+		  srl.bill_id,
+		  </if> 
+		  <if test = "ref_id != null and ref_id !=''"> 
+		  srl.ref_id,
+		  </if> 
+		  <if test = "belong_type != null and belong_type !=''">
+		  srl.belong_type,
+		  </if> 
+		  srl.feemodel_name,
+		  srl.fee_formula,
+		  srl.fee_type,
+		  srl.min_type,
+		  IFNULL(srl.min_consume, 0.0) AS min_consume,
+		  srl.max_type,
+		  IFNULL(srl.max_consume, 0.0) AS max_consume,
+		  IFNULL(srl.discount, 0.0) AS discount,
+		  IFNULL(srl.fix_charge_type, 0) AS fix_charge_type,
+		  <if test = "id != null and id !=''" > 
+		  srl.id,
+		  </if> 
+		  stm.label AS fee_type_name 
+		FROM
+		  ss_order_model srl 
+		LEFT JOIN charge_type stm 
+		  ON stm.value = srl.fee_type 
+		  AND stm.type = 'fee_type' 
+		WHERE 1 = 1 
+		  AND srl.del_flag = '0'
+		  <if test = "bill_id != null and bill_id !=''"> 
+		  AND srl.bill_id = #{bill_id} 
+		  </if> 
+		  <if test = "ref_id != null and ref_id !=''"> 
+		  AND srl.ref_id = #{ref_id}
+		  </if> 
+		  <if test = "id != null and id !=''" > 
+		  AND srl.id = #{id}
+		  </if> 
+		  <if test = "belong_type != null and belong_type !=''"> 
+		  AND srl.belong_type = #{belong_type}
+		  </if> 
+	</select>
+	<select id="querySSChargePrice"
+		parameterType="com.hundsun.boss.modules.charge.form.bill.OrderPriceForm"
+		resultType="com.hundsun.boss.modules.charge.form.bill.OrderPriceForm">
+		SELECT 
+		  feemodel_id,
+		  price,
+		  fixed_charge,
+		  IFNULL(fee_ratio,0.0) * 1000 AS fee_ratio,
+		  IFNULL(max_consume,0.0) as max_consume,
+		  option_name,
+		  step_interval,
+		  step_begin,
+		  step_end,
+		  feemodel_id,
+		  remarks 
+		FROM
+		  ss_order_price 
+		WHERE 1 = 1 
+		  AND del_flag = '0'
+		  <if test = "bill_id != null and bill_id !=''"> 
+		  AND bill_id = #{bill_id} 
+		  </if> 
+		  <if test = "product_id != null and product_id !=''"> 
+		  AND product_id = #{product_id}
+		  </if> 
+		  <if test = "feemodel_id != null and feemodel_id !=''" > 
+		  AND feemodel_id = #{feemodel_id}
+		  </if> 
+		ORDER BY step_begin 
+	</select>
+	<!-- 根据订单id查看预付保底周期-->
+	<select id="querySSOrderPaymentCycle"
+		parameterType="com.hundsun.boss.modules.charge.form.bill.OrderAdvPaymentForm"
+		resultType="com.hundsun.boss.modules.charge.form.bill.OrderAdvPaymentForm">
+		select
+			*
+		from ss_order_adv_payment
+		<where>
+			1=1
+			AND del_flag = '0'
+			<if test="contract_id != null and contract_id !=''">
+				and contract_id = #{contract_id}
+			</if>
+			<if test="combine_id != null and combine_id !=''">
+				and combine_id = #{combine_id}
+			</if>
+			<if test="bill_id != null and bill_id !=''">
+				and bill_id = #{bill_id}
+			</if>
+		</where>
+		order by advance_date
+	</select> 
+	<!-- 账单详情-->
+	<select id="getChargeDetail"
+		parameterType="com.hundsun.boss.modules.charge.form.bill.ChargeBillSearchForm"
+		resultType="com.hundsun.boss.modules.charge.form.bill.OrderInfoForm">
+		SELECT 
+		    sro.bill_id,
+		    sro.contract_id,
+		    sro.office_id,
+            vrf.chinesename as bill_title,
+            sro.payment_cycle
+		FROM
+		    ss_order_info sro
+		LEFT JOIN v_customer_jf vrf 
+    		ON vrf.customerid = sro.customer_id 
+		WHERE 1 = 1
+		AND sro.del_flag = '0'
+		<if test = "bill_id != null and bill_id !=''" > 
+		    AND sro.bill_id = #{bill_id}  
+		</if>
+		<if test="office_id !=null and office_id !='' ">   
+          and sro.office_id = #{office_id}
+        </if>
+        <if test="dept !=null and dept !='' ">   
+          and sro.office_id in (${dept}) 
+        </if>
+	</select>
+	
+    <select id="getChargeOrderInfo"
+		parameterType="com.hundsun.boss.modules.charge.form.bill.ChargeOrderInfo"
+		resultType="com.hundsun.boss.modules.charge.form.bill.ChargeOrderInfo">
+		SELECT 
+		  ero.bill_id,
+		  ero.contract_id,
+		  ero.bill_title,
+		  ero.bill_display_date,
+		  ero.customer_name,
+		  ero.pay_deadline,
+		  CASE
+		    WHEN ero.pay_deadline = '' 
+		    OR ero.pay_deadline IS NULL 
+		    THEN '' 
+		    ELSE CONCAT(
+		      DATE_FORMAT(
+		        DATE_ADD(
+		          ero.bill_display_date,
+		          INTERVAL 1 MONTH
+		        ),
+		        '%c月'
+		      ),
+		      ero.pay_deadline,
+		      '日'
+		    ) 
+		  END AS pay_deadline_ymd,
+		  ero.collec_comp_name,
+		  IFNULL(ero.season_charge, 0.0) AS season_charge,
+		  IFNULL(
+		    ero.total_service_charge,
+		    0.0
+		  ) AS total_service_charge,
+		  IFNULL(ero.total_bankreceipt, 0.0) AS total_bankreceipt,
+		  IFNULL(ero.total_adjust_amt, 0.0) AS total_adjust_amt,
+		  IFNULL(ero.total_advance_service_charge, 0.0) AS total_advance_service_charge,
+		  ero.adjust_amt,
+		  ero.receivable,
+		  IFNULL(ero.payable, 0.0) AS payable,
+		  vtf.receipt_name,
+		  vtf.bank_name,
+		  vtf.bank_account,
+		  IFNULL(ero.total_advance_charge, 0.0) AS total_advance_charge
+		FROM
+		  charge_order_info ero,
+		  order_info ro 
+		  LEFT JOIN v_department_jf vtf 
+		    ON ro.office_id = vtf.hs_dept_id 
+		WHERE 1 = 1 
+		  AND ro.del_flag = '0'
+		  AND ro.contract_id = ero.contract_id 
+		  <if test = "bill_id != null and bill_id !=''" > 
+		  AND ero.bill_id = #{bill_id}  
+		  </if> 
+		  <if test = "contract_id != null and contract_id !=''"> 
+		  AND ero.contract_id = #{contract_id} 
+		  </if>
+	</select>
+	
+	<select id="queryChargeCombine"
+		parameterType="com.hundsun.boss.modules.charge.form.bill.OrderCombineForm"
+		resultType="com.hundsun.boss.modules.charge.form.bill.OrderCombineForm">
+		SELECT 
+		  sre.bill_id,
+		  sre.id,
+		  sre.id as combine_id,
+		  sre.contract_id,
+		  sre.combine_begin_date,
+		  sre.combine_end_date 
+		FROM
+		  ss_order_combine sre,
+		  charge_bill_info elo 
+		WHERE elo.bill_id = sre.bill_id 
+		  AND elo.contract_id = sre.contract_id 
+		  AND elo.combine_id = sre.id 
+		  AND elo.belong_type = '2' 
+		  AND sre.del_flag = '0'
+		  <if test = "bill_id != null and bill_id !=''" > 
+		  AND sre.bill_id = #{bill_id} 
+		  </if> 
+		  <if test = "contract_id != null and contract_id !=''" > 
+		  AND sre.contract_id = #{contract_id} 
+		  </if>
+	</select>
+	
+    <select id="queryChargeCombineProduct"
+		parameterType="com.hundsun.boss.modules.charge.form.bill.OrderProductForm"
+		resultType="com.hundsun.boss.modules.charge.form.bill.OrderProductForm">
+		SELECT 
+		  srt.id,
+		  elo.bill_id,
+		  elo.contract_id,
+		  elo.combine_id,
+		  elo.product_id,
+		  srt.product_name,
+		  elo.prod_begin_date,
+		  elo.prod_end_date,
+		  elo.feemodel_id,
+		  elo.charge_begin_date,
+		  elo.charge_end_date 
+		FROM
+		  charge_bill_info elo,
+		  ss_order_product srt 
+		WHERE elo.belong_type = '3' 
+		  AND elo.bill_id = srt.bill_id 
+		  AND elo.combine_id = srt.combine_id 
+		  AND elo.product_id = srt.id
+		  AND srt.del_flag = '0'
+		<if test = "bill_id != null and bill_id !=''" > 
+		  AND elo.bill_id = #{bill_id} 
+		</if> 
+		<if test = "combine_id != null and combine_id !=''" > 
+		  AND elo.combine_id = #{combine_id}
+		</if>
+	</select>
+	
+	<select id="queryChargeTransDetail"
+		parameterType="com.hundsun.boss.modules.charge.form.bill.ChargeTransDetail"
+		resultType="com.hundsun.boss.modules.charge.form.bill.ChargeTransDetail">
+		SELECT 
+		  DATE_FORMAT(
+		    CASE
+		      WHEN srl.fix_charge_type = '1' 
+		      THEN esl.occur_date 
+		      ELSE MAX(esl.occur_date) 
+		    END,
+		    '%Y年%c月%e日'
+		  ) AS occur_date,
+		  CASE
+		    WHEN srl.fix_charge_type = '1' 
+		    THEN IFNULL(esl.org_amt, 0.0) 
+		    ELSE IFNULL(elo.org_amt, 0.0) 
+		  END AS org_amt,
+		  CASE
+		    WHEN srl.fix_charge_type = '1' 
+		    THEN IFNULL(esl.service_charge, 0.0) 
+		    ELSE IFNULL(elo.service_charge, 0.0) 
+		  END AS service_charge 
+		FROM
+		  charge_trans_detail esl,
+		  charge_bill_info elo,
+		  ss_order_model srl,
+		  ss_order_product srt 
+		WHERE elo.bill_id = esl.bill_id 
+		  AND elo.product_id = esl.product_id 
+		  AND elo.feemodel_id = esl.feemodel_id 
+		  AND elo.belong_type = '3' 
+		  AND srl.bill_id = esl.bill_id 
+		  AND srt.bill_id = esl.bill_id
+		  AND srl.ref_id = srt.id
+		  AND srt.id = esl.product_id 
+		  AND srl.ref_id = esl.product_id 
+		  AND srl.id = esl.feemodel_id 
+		  AND srl.del_flag = '0' 
+		  AND srt.del_flag = '0'
+		  <if test = "bill_id != null and bill_id !='' and view_flag == 0" > 
+		  AND esl.bill_id = #{bill_id} 
+		  </if> 
+		  <if test = "contract_id != null and contract_id !=''" > 
+		  AND esl.contract_id = #{contract_id}
+		  </if> 
+		  <if test = "combine_id != null and combine_id !=''" > 
+		  AND esl.combine_id = #{combine_id}
+		  </if> 
+		  <if test = "product_id != null and product_id !=''" > 
+		  AND esl.product_id = #{product_id}
+		  </if>
+		  <if test = "feemodel_id != null and feemodel_id !=''" > 
+		  AND esl.feemodel_id = #{feemodel_id}
+		  </if>
+		  <if test="view_flag != 0">  
+			<![CDATA[ 
+			AND DATE_FORMAT(esl.occur_date, '%Y-%m-%d') >=DATE_FORMAT(fun_get_yearly_begin_date(#{charge_begin_date},#{prod_begin_date}),'%Y-%m-%d')
+			AND DATE_FORMAT(esl.occur_date, '%Y-%m-%d') <=DATE_FORMAT(#{charge_end_date},'%Y-%m-%d')
+			]]>
+		  </if>
+		  <if test="begin_date != null and begin_date != '' ">  
+		   AND esl.occur_date >= #{begin_date}
+		  </if>
+		  <if test="end_date != null and end_date != ''"> 
+	  	  <![CDATA[ AND esl.occur_date <= #{end_date} ]]>
+		  </if>
+		 GROUP BY esl.bill_id,
+		 CASE
+		    WHEN srl.fix_charge_type = '1' 
+		    THEN esl.charge_end_date 
+		    ELSE DATE_FORMAT(esl.occur_date, '%Y-%m') 
+		 END
+		 order by DATE_FORMAT(occur_date, '%Y-%m-%d')
+		 
+	</select>
+	
+	<select id="queryChargeBillInfo"
+		parameterType="com.hundsun.boss.modules.charge.form.bill.ChargeBillInfo"
+		resultType="com.hundsun.boss.modules.charge.form.bill.ChargeBillInfo">
+		SELECT 
+		  IFNULL(service_charge,0.0) as service_charge,
+		  IFNULL(org_amt,0.0) as org_amt,
+		  IFNULL(adjust_amt,0.0) as adjust_amt,
+		  IFNULL(receivable,0.0) as receivable,
+		  feemodel_id,
+		  IFNULL(season_charge,0.0) as season_charge,
+		  IFNULL(yearly_total_receive,0.0) as yearly_total_receive,
+		  IFNULL(yearly_adjust_amt,0.0) as yearly_adjust_amt,
+		  IFNULL(yearly_service_charge,0.0) as yearly_service_charge,
+		  IFNULL(yearly_advance_amount,0.0) as yearly_advance_amount,
+		  IFNULL(total_bankreceipt,0.0) as total_bankreceipt,
+		  charge_begin_date,
+		  DATE_FORMAT(charge_begin_date, '%Y年%c月%e日') AS charge_begin_date_ymd,
+		  DATE_FORMAT(charge_begin_date, '%Y年%c月') AS charge_begin_date_ym,
+		  charge_end_date,
+		  DATE_FORMAT(charge_end_date, '%Y年%c月%e日') AS charge_end_date_ymd,
+		  IFNULL(charge_amt,0.0) as charge_amt,
+		  IFNULL(min_type,0.0) as min_type,
+		  IFNULL(min_consume,0.0) as min_consume
+		FROM
+		  charge_bill_info 
+		WHERE 1 = 1 
+		  <if test = "bill_id != null and bill_id !=''" > 
+		  AND bill_id = #{bill_id} 
+		  </if> 
+		  <if test = "contract_id != null and contract_id !=''" > 
+		  AND contract_id = #{contract_id}
+		  </if> 
+		  <if test = "combine_id != null and combine_id !=''" > 
+		  AND combine_id = #{combine_id}
+		  </if> 
+		  <if test = "product_id != null and product_id !=''" > 
+		  AND product_id = #{product_id}
+		  </if> 
+		  <if test = "feemodel_id != null and feemodel_id !=''" > 
+		  AND feemodel_id = #{feemodel_id}
+		  </if> 
+		  <if test = "belong_type != null and belong_type !=''" > 
+		  AND belong_type = #{belong_type}
+		  </if>
+	</select>
+	<insert id="insertUnifyDatas" parameterType="map">
+		INSERT INTO charge_unify_interface (
+		  oc_date,
+		  contract_id,
+		  customer_id,
+		  product_id,
+		  office_id,
+		  fee_type,
+		  data1,
+		  data2,
+		  data3,
+		  data4,
+		  data5,
+		  <if test="BILLING_STR_VALUE1 !=null and BILLING_STR_VALUE1 !='' ">   
+		  comment1,
+		  </if>
+		  <if test="BILLING_STR_VALUE2 !=null and BILLING_STR_VALUE2 !='' ">   
+		  comment2,
+		  </if>
+		  <if test="BILLING_STR_VALUE3 !=null and BILLING_STR_VALUE3 !='' ">
+		  comment3,
+		  </if>
+		  <if test="BILLING_STR_VALUE4 !=null and BILLING_STR_VALUE4 !='' ">
+		  comment4,
+		  </if>
+		  <if test="BILLING_STR_VALUE5 !=null and BILLING_STR_VALUE5 !='' ">
+		  comment5,
+		  </if>
+		  batch_no
+		) VALUES
+		(
+		  #{OC_DATE},
+		  #{XIETONG_CONTRACT_ID},
+		  #{XIETONG_USER_ID},
+		  #{XIETONG_PRODUCT_ID},
+		  #{BU_ID},
+		  #{ORDER_SOURCE},
+		  #{BILLING_NUM_VALUE1},
+		  #{BILLING_NUM_VALUE2},
+		  #{BILLING_NUM_VALUE3},
+		  #{BILLING_NUM_VALUE4},
+		  #{BILLING_NUM_VALUE5},
+		  <if test="BILLING_STR_VALUE1 !=null and BILLING_STR_VALUE1 !='' ">   
+		  #{BILLING_STR_VALUE1},
+		  </if>
+		  <if test="BILLING_STR_VALUE2 !=null and BILLING_STR_VALUE2 !='' ">   
+		  #{BILLING_STR_VALUE2},
+		  </if>
+		  <if test="BILLING_STR_VALUE3 !=null and BILLING_STR_VALUE3 !='' "> 
+		  #{BILLING_STR_VALUE3},
+		  </if>
+		  <if test="BILLING_STR_VALUE4 !=null and BILLING_STR_VALUE4 !='' "> 
+		  #{BILLING_STR_VALUE4},
+		  </if>
+		  <if test="BILLING_STR_VALUE5 !=null and BILLING_STR_VALUE5 !='' "> 
+		  #{BILLING_STR_VALUE5},
+		  </if>
+		  #{batch_no}
+		)
+    </insert>
+    <!--修改审核状态 -->
+	<update id="checkBill" parameterType="java.util.Map">
+		update 
+			charge_order_info
+		set 
+			check_status = '1',
+			cc_flag = #{cc_flag}
+		where 
+			bill_id = #{bill_id}
+	</update>
+	<!-- 删除账单 -->
+	<select id="deleteBill" parameterType="java.util.Map">
+   		CALL sp_delete_bill(#{contract_id});
+   	</select>
+   	<!-- 合同计费列表数据查询list -->
+   	<select id="queryBillChargingList"
+   		parameterType="com.hundsun.boss.modules.charge.form.bill.ChargeBillSearchForm"
+   		resultType="java.util.Map">
+   		SELECT 
+		  ero.bill_id,
+		  ro.contract_id,
+		  DATE_FORMAT(
+		    ro.order_begin_date,
+		    '%Y年%m月%d日'
+		  ) AS order_begin_date,
+		  DATE_FORMAT(
+		    ro.order_end_date,
+		    '%Y年%m月%d日'
+		  ) AS order_end_date,
+		  ro.customer_id,
+		  ero.customer_name,
+		  IFNULL(SUM(elo.service_charge), 0) AS service_charge,
+		  IFNULL(ero.adjust_amt, 0) AS adjust_amt,
+		  IFNULL(ero.receivable, 0) AS receivable,
+		  IFNULL(ero.season_charge, 0) AS season_charge,
+		  IFNULL(ero.payable, 0) AS payable,
+		  IFNULL(ero.total_service_charge, 0) AS total_service_charge,
+		  IFNULL(ero.total_bankreceipt, 0) AS total_bankreceipt,
+		  IFNULL(ero.total_adjust_amt, 0) AS total_adjust_amt,
+		  IFNULL(
+		    ero.total_advance_service_charge,
+		    0
+		  ) AS total_advance_service_charge,
+		  CASE
+		    WHEN ero.send_status = 1 
+		    THEN '已发送' 
+		    ELSE '未发送' 
+		  END AS send_status,
+		  IFNULL((SELECT 
+		    SUM(charge_amt) 
+		  FROM
+		    charge_bill_info cbi 
+		  WHERE cbi.belong_type = '2' 
+		    AND cbi.bill_id = elo.bill_id), 0) charge_amt 
+		FROM
+		  charge_order_info ero,
+		  order_info ro,
+		  charge_bill_info elo 
+		WHERE ro.contract_id = ero.contract_id 
+		  AND elo.bill_id = ero.bill_id 
+		  AND elo.belong_type = '2' 
+		  AND ro.del_flag = '0'
+		<if test="office_id != null and office_id != '' ">
+		  AND ro.office_id in (${office_id}) 
+		</if>
+		<if test="send_status != null and send_status != '' ">
+		  AND ero.send_status =#{send_status}
+		</if>
+		<if test="charge_off != null and charge_off != '' ">
+		  AND elo.charge_off = #{charge_off}
+		</if>
+		<if test="user_name != null and user_name != '' ">
+		  AND ero.customer_name like CONCAT('%', #{user_name},'%')
+		</if>
+		<if test="charge_begin_month != null and charge_begin_month != '' ">  
+		   AND DATE_FORMAT(elo.charge_begin_date, '%Y%m') >= #{charge_begin_month}
+		</if>
+		<if test="charge_end_month != null and charge_end_month != ''"> 
+  		<![CDATA[ AND DATE_FORMAT(elo.charge_end_date, '%Y%m') <= #{charge_end_month} ]]>
+		</if>
+		<if test="contract_id !=null and contract_id !='' ">   
+          and ro.contract_id like CONCAT('%', #{contract_id},'%')
+        </if> 
+         <if test="bill_id !=null and bill_id !='' ">   
+          and elo.bill_id = #{bill_id}
+        </if>
+        <if test="customer_id !=null and customer_id !='' ">   
+          and ro.customer_id = #{customer_id}
+        </if>
+		GROUP BY ero.bill_id 
+		ORDER BY ro.contract_id, ero.bill_id DESC
+   	</select>
+   	<!--修改账单发送状态 -->
+	<update id="updateSendStatus" parameterType="java.util.Map">
+		update 
+			charge_order_info
+		set 
+			send_status = '1'
+		where 
+			bill_id = #{bill_id}
+	</update>
+	<!-- 插入临时表 -->
+   	<insert id="insertChargePeriodTemp" parameterType="java.util.List">
+          INSERT INTO charge_period_temp (
+		    batch_no,
+		    contract_id,
+		    product_id,
+		    fee_type,
+		    prod_begin_date,
+		    prod_end_date,
+		    charge_begin_date,
+		    charge_end_date,
+		    id,
+		    bill_id
+		  ) 
+        values
+        <foreach collection="list" item="item" index="index" separator=",">
+            (#{item.batch_no},
+             #{item.contract_id},
+             #{item.product_id},
+             #{item.fee_type},
+             #{item.prod_begin_date},
+             #{item.prod_end_date},
+             #{item.charge_begin_date},
+             #{item.charge_end_date},
+             #{item.id},
+             #{item.bill_id})
+        </foreach>
+    </insert>
+   	<!-- 插入拆分临时表 -->
+   	<select id="insertSplitTemp" parameterType="java.util.Map">
+   		CALL sp_insert_split_temp(#{contract_id}, #{batch_no});
+   	</select>
+   	<!-- 合同是否计费 -->
+    <select id="countChargeOrder"
+   		parameterType="java.lang.String" 
+   		resultType="int">
+   		SELECT 
+		  count(*)
+		FROM
+		  charge_order_info
+		WHERE 1=1
+   		<if test="_parameter != null and _parameter != '' ">
+			and contract_id = #{_parameter}
+		</if>
+   	</select>
+   	
+   	<select id="getOrderSource" parameterType="com.hundsun.boss.modules.charge.form.bill.DownloadForm" resultType="java.util.Map">
+		SELECT 
+		  sro.office_id,
+		  vtf.dept_name 
+		FROM
+		  ss_order_info sro 
+		  LEFT JOIN v_department_jf vtf 
+		    ON sro.office_id = vtf.hs_dept_id 
+		WHERE 1 = 1
+		AND vtf.dept_name IS NOT NULL
+		AND sro.del_flag = '0'
+		<if test="dept != null and dept != ''">  
+			AND sro.office_id in (${dept})
+		</if>
+		GROUP BY sro.office_id 
+	</select>
+
+	<select id="getBillIds" parameterType="com.hundsun.boss.modules.charge.form.bill.DownloadForm" resultType="string">
+		SELECT 
+		  sro.bill_id 
+		FROM
+		  charge_bill_info elo,
+		  ss_order_info sro 
+		  LEFT JOIN v_customer_jf vrf 
+		    ON vrf.customerid = sro.customer_id 
+		WHERE elo.bill_id = sro.bill_id 
+		  AND elo.belong_type = '1' 
+		  AND sro.del_flag = '0'
+		<if test="office_id != null and office_id != ''">  
+		  AND sro.office_id = #{office_id}
+		</if>
+		<if test="charge_begin_month != null and charge_begin_month != ''">  
+		  <![CDATA[AND DATE_FORMAT(elo.charge_begin_date, '%Y%m') >= #{charge_begin_month}]]>
+		</if>
+		<if test="charge_end_month != null and charge_end_month != ''">  
+		  <![CDATA[AND DATE_FORMAT(elo.charge_end_date, '%Y%m') <= #{charge_end_month}]]>
+		</if>
+		<if test="charge_end_date != null and charge_end_date != ''">  
+		  <![CDATA[AND elo.charge_begin_date <= #{charge_end_date}]]>
+		</if>
+		<if test="charge_begin_date != null and charge_begin_date != ''">  
+		  <![CDATA[AND elo.charge_end_date >= #{charge_begin_date}]]>
+		</if>
+		<if test="contract_id != null and contract_id != ''">  
+		  AND elo.contract_id = #{contract_id}
+		</if>
+		ORDER BY elo.charge_begin_date
+	</select>
+	<select id="getMaxBillInfo" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT 
+		  MAX(bill_id) bill_id,
+		  fun_get_date_diff(
+		    ro.order_end_date,
+		    ro.order_begin_date
+		  ) charge_date_count 
+		FROM
+		  charge_bill_info elo,
+		  order_info ro 
+		WHERE ro.contract_id = elo.contract_id 
+		  AND elo.belong_type = '1'
+		  AND elo.contract_id = #{contract_id}
+		<if test="charge_end_date != null and charge_end_date != ''">  
+		  <![CDATA[AND elo.charge_end_date <= #{charge_end_date}]]>
+		</if>
+	</select>
+	<select id="getChargeProductMonthlyCharge"
+		parameterType="com.hundsun.boss.modules.charge.form.bill.ChargeTransDetail"
+		resultType="com.hundsun.boss.modules.charge.form.bill.ChargeProductMonthlyCharge">
+		SELECT 
+		  DATE_FORMAT(U.occur_date, '%Y年%m月') charge_month,
+		  SUM(service_charge) service_charge 
+		FROM
+			 (SELECT 
+			    (CASE
+			      WHEN srl.fix_charge_type = '1' 
+			      THEN esl.occur_date 
+			      ELSE MAX(esl.occur_date) 
+			      END
+			    ) AS occur_date,
+			  CASE
+			    WHEN srl.fix_charge_type = '1' 
+			    THEN IFNULL(esl.org_amt, 0.0) 
+			    ELSE IFNULL(elo.org_amt, 0.0) 
+			  END AS org_amt,
+			  CASE
+			    WHEN srl.fix_charge_type = '1' 
+			    THEN IFNULL(esl.service_charge, 0.0) 
+			    ELSE IFNULL(elo.service_charge, 0.0) 
+			  END AS service_charge 
+			FROM
+			  charge_trans_detail esl,
+			  charge_bill_info elo,
+			  ss_order_model srl,
+			  ss_order_product srt 
+			WHERE elo.bill_id = esl.bill_id 
+			  AND elo.product_id = esl.product_id 
+			  AND elo.feemodel_id = esl.feemodel_id 
+			  AND elo.belong_type = '3' 
+			  AND srl.bill_id = esl.bill_id 
+			  AND srt.bill_id = esl.bill_id
+			  AND srl.ref_id = srt.id
+			  AND srt.id = esl.product_id 
+			  AND srl.ref_id = esl.product_id 
+			  AND srl.id = esl.feemodel_id 
+			  AND srl.del_flag = '0' 
+			  AND srt.del_flag = '0'
+			  <if test = "bill_id != null and bill_id !='' and view_flag == 0" > 
+			  AND esl.bill_id = #{bill_id} 
+			  </if> 
+			  <if test = "contract_id != null and contract_id !=''" > 
+			  AND esl.contract_id = #{contract_id}
+			  </if> 
+			  <if test = "combine_id != null and combine_id !=''" > 
+			  AND esl.combine_id = #{combine_id}
+			  </if> 
+			  <if test = "product_id != null and product_id !=''" > 
+			  AND esl.product_id = #{product_id}
+			  </if>
+			  <if test = "feemodel_id != null and feemodel_id !=''" > 
+			  AND esl.feemodel_id = #{feemodel_id}
+			  </if>
+			  <if test="view_flag != 0">  
+				<![CDATA[ 
+				AND DATE_FORMAT(esl.occur_date, '%Y-%m-%d') >=DATE_FORMAT(fun_get_yearly_begin_date(#{charge_begin_date},#{prod_begin_date}),'%Y-%m-%d')
+				AND DATE_FORMAT(esl.occur_date, '%Y-%m-%d') <=DATE_FORMAT(#{charge_end_date},'%Y-%m-%d')
+				]]>
+			  </if>
+			  <if test="begin_date != null and begin_date != '' ">  
+			   AND esl.occur_date >= #{begin_date}
+			  </if>
+			  <if test="end_date != null and end_date != ''"> 
+		  	  <![CDATA[ AND esl.occur_date <= #{end_date} ]]>
+			  </if>
+			 GROUP BY esl.bill_id,
+			 CASE
+			    WHEN srl.fix_charge_type = '1' 
+			    THEN esl.charge_end_date 
+			    ELSE DATE_FORMAT(esl.occur_date, '%Y-%m') 
+			 END
+			 order by DATE_FORMAT(occur_date, '%Y-%m-%d')) U 
+		GROUP BY DATE_FORMAT(U.occur_date, '%Y%m')
+	</select>
+	<!-- 补足统一接口日保底数据 -->
+	<select id="genInsertDayMinConsumeUnifyInterface" parameterType="java.util.Map">
+   		CALL sp_gen_charge_unify_interface(#{batch_no});
+   	</select>
+</mapper>

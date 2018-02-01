@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<columns>
+	<column header="到款日期" type="string" field="bankreceipt_month"/>
+	<column header="所属部门" type="string" field="order_source"/>
+	<column header="协同合同编号" type="string" field="hs_contract_id"/>
+	<column header="协同客户号" type="string" field="hs_user_id"/>
+	<column header="客户名称" type="string" field="user_name" />
+	<column header="销售产品编号" type="string" field="saleprdid" />
+	<column header="销售产品名称" type="string" field="saleprdname" />
+	<column header="考核部门" type="string" field="audit_branch_name" />
+	<column header="考核人" type="string" field="audit_employee_name" />
+	<column header="到款金额" type="number" field="bankreceipt_amount" format="#,##0.########"/>
+	<column header="录入类型" type="string" field="entry_type" />
+	<column header="创建人" type="string" field="operater_no" />
+	<column header="创建时间" type="string" field="create_datetime" />
+</columns>
+		
+		
+		
+		

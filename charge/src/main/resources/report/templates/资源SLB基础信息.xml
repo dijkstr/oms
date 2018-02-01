@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<columns>
+	<column header="部门" type="string" field="department_id" dict="res_apply_depart" iskey="true"/>
+	<column header="业务分组" type="string" field="project_name"/>
+	<column header="slb地址" type="string" field="slb_addr" iskey="true"/>
+	<column header="后端地址" type="string" field="back_addr" />
+	<column header="端口" type="string" field="slb_port" />
+	
+</columns>

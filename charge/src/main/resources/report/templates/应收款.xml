@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<columns>
+	<column header="所属部门" type="string" field="companyname" />
+	<column header="协同客户编号" type="string" field="hs_user_id" />
+	<column header="协同客户名称" type="string" field="hs_customername" />
+	<column header="协同合同编号" type="string" field="hs_contract_id"/>
+	<column header="当前应收" type="number" field="current_pay" format="#,##0.########"/>
+	<column header="本季应收" type="number" field="season_pay" format="#,##0.########"/>
+	<column header="累计已到款" type="number" field="total_receive" format="#,##0.########"/>
+	<column header="累计总应收款" type="number" field="total_pay" format="#,##0.########"/>
+	<column header="累计已确认收入额" type="number" field="total_confirm_income" format="#,##0.########"/>
+	<column header="累计已确认收入应收" type="number" field="total_confirm_pay" format="#,##0.########"/>
+	<column header="支付周期" type="string" field="payment_cycle" />
+	<column header="考核人" type="string" field="audit_employee_name" />
+	<column header="考核部门" type="string" field="audit_branch_name"/>
+</columns>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hundsun.boss.modules.charge.dao.sync.SyncReceiveDao">
+
+	<insert id="save"
+		parameterType="com.hundsun.boss.modules.charge.entity.sync.SyncReceive">
+		INSERT INTO charge_bankreceipt_bkp (
+		  receiveid,
+		  create_datetime,
+		  dbilldate,
+		  vbillcode,
+		  company,
+		  contractid,
+		  productid,
+		  productname,
+		  receivemny,
+		  ts
+		) 
+		VALUES
+		  (#{receiveid},#{create_datetime},#{dbilldate},#{vbillcode},
+		  #{company},#{contractid},#{productid},#{productname},#{receivemny},#{ts}) 
+	</insert>
+
+	<select id="get" parameterType="java.lang.String"
+		resultType="com.hundsun.boss.modules.charge.entity.sync.SyncReceive">
+		SELECT 
+		  receiveid,
+		  create_datetime,
+		  dbilldate,
+		  vbillcode,
+		  company,
+		  contractid,
+		  productid,
+		  productname,
+		  receivemny,
+		  ts
+		  FROM charge_bankreceipt_bkp WHERE receiveid=#{_parameter}
+	</select>
+	
+	<update id="update"
+	parameterType="com.hundsun.boss.modules.charge.entity.sync.SyncReceive">
+	UPDATE  charge_bankreceipt_bkp SET 
+		  create_datetime=#{create_datetime},
+		  dbilldate=#{dbilldate},
+		  vbillcode=#{vbillcode},
+		  company=#{company},
+		  contractid=#{contractid},
+		  productid=#{productid},
+		  productname=#{productname},
+		  receivemny=#{receivemny},
+		  ts=#{ts}
+	WHERE receiveid=#{receiveid}
+	   
+	</update>
+</mapper>

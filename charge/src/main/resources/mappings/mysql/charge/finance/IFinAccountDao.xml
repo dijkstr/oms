@@ -1,0 +1,548 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hundsun.boss.modules.charge.dao.finance.FinSummaryDao">
+	
+	<!--获取财务汇总表列表信息.-->
+	<select id="queryFinSummaryList"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm"
+		resultType="java.util.Map">
+		SELECT 
+		  ro.office_id,
+		  etp.contract_id,
+		  ro.customer_id,
+		  vrf.chinesename as user_name,
+		  etp.charge_month,
+		  IFNULL(etp.income, 0) income,
+		  IFNULL(etp.change_income, 0) change_income,
+		  IFNULL(etp.service_charge, 0) service_charge,
+		  IFNULL(etp.change_service_charge, 0) change_service_charge,
+		  IFNULL(etp.receiveable, 0) receiveable ,
+		  IFNULL(etp.payable, 0) payable
+		FROM
+		  charge_monthly_contract_income etp
+			LEFT JOIN order_info ro ON etp.contract_id = ro.contract_id
+			LEFT JOIN v_customer_jf vrf ON ro.customer_id = vrf.customerid
+		<where> 1=1
+			<if test = "charge_month != null and charge_month != ''" > 
+			  	<![CDATA[ and etp.charge_month = #{charge_month} ]]>
+		    </if> 
+		    <if test="contract_id != null and contract_id != ''"> 
+				and etp.contract_id = #{contract_id}  
+		    </if>
+			<if test="customer_id != null and customer_id != ''"> 
+				and ro.customer_id = #{customer_id}  
+			</if>
+			<if test="user_name != null and user_name != ''"> 
+				and vrf.chinesename LIKE CONCAT('%', #{user_name},'%')
+			</if>
+			<if test="office_id !=null and office_id !='' ">   
+          		and ro.office_id = #{office_id}
+        	</if>
+	        <if test="dept !=null and dept !='' ">   
+	        	and ro.office_id in (${dept}) 
+	        </if>
+	    </where>
+	</select>
+	
+	<!--获取财务汇总表明细.-->
+	<select id="getFinSummaryDetailList"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm"
+		resultType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm">
+		<include refid="getDetailList"/>
+	</select>
+	<select id="exportDetailList"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm"
+		resultType="java.util.Map">
+		<include refid="getDetailList"/>
+	</select>
+	
+	<!--财务汇总表明细.-->
+   	<sql id="getDetailList">
+	  SELECT 
+	    V.office_id,
+	    V.con_id,
+	    V.contract_id,
+		ro.customer_id,
+		vrf.chinesename as user_name,
+		V.product_id,
+		V.product_name,
+	    V.charge_begin_date,
+	    V.charge_end_date,
+	    V.payment_type,
+	    CASE
+			WHEN payment_type = '12471' 
+		    THEN '一次性费用' 
+		    WHEN payment_type = '12472' 
+		    THEN '不定期' 
+		    WHEN payment_type = '12473' 
+		    THEN '年费' 
+		    WHEN payment_type = '12474' 
+		    THEN '条件延后' 
+		    WHEN payment_type = '12475' 
+		    THEN '技术服务费' 
+		    ELSE '' 
+		END as display_name,
+	    V.income as finance_current_income,
+	    V.income_begin_date,
+	    V.income_end_date,
+	    V.detailid
+	  FROM
+		charge_detail_temp V
+		LEFT JOIN order_info ro ON V.contract_id = ro.contract_id
+	    LEFT JOIN v_customer_jf vrf ON ro.customer_id = vrf.customerid
+	    WHERE 1=1
+	      <if test="contract_id != null and contract_id != ''"> 
+			and V.contract_id = #{contract_id}  
+		  </if> 
+		  <if test="office_id != null and office_id != '' ">
+		  	and V.office_id in (${office_id}) 
+		</if>
+		order by V.charge_end_date desc, V.payment_type desc
+	</sql>
+	<select id="insertIncomeInterface" parameterType="java.util.Map">
+   		CALL sp_finance_income_interface(#{contract_id}, #{batch_no}, #{dept});
+   	</select>
+	<select id="exportLastDetail"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm"
+		resultType="java.util.Map">
+		SELECT 
+		  vtlf.detailid,
+		  V.contract_id,
+		  V.customer_id,
+		  V.user_name,
+		  V.product_id,
+		  V.product_name,
+		  V.payment_type,
+		  V.display_name,
+		  DATE_FORMAT((V.charge_begin_date), '%Y-%m-%d') AS charge_begin_date,
+		  DATE_FORMAT((V.charge_end_date), '%Y-%m-%d') AS charge_end_date,
+		  IFNULL(V.total_income, 0) AS finance_current_income
+		FROM
+		  (SELECT DISTINCT
+		    U.office_id,
+		    U.con_id,
+		    U.contract_id,
+		    U.customer_id,
+		    U.user_name,
+		    U.product_id,
+		    U.ex_product_id,
+		    U.product_name,
+		    DATE_FORMAT(U.charge_begin_date, '%Y-%m-%d') AS charge_begin_date,
+		    DATE_FORMAT(U.charge_end_date, '%Y-%m-%d') AS charge_end_date,
+		    U.payment_type,
+		    U.display_name,
+		    ROUND(
+		      (
+		        GREATEST(
+		          U.current_min_income * fun_get_date_diff (
+		            U.charge_end_date,
+		            U.yearly_begin_date
+		          ) / fun_get_yearly_day_count (U.yearly_begin_date),
+		          U.yearly_service_charge
+		        ) + U.adjust_amt
+		      ) * U.split_ratio / 100,
+		      2
+		    ) AS total_income,
+		    U.income_begin_date,
+		    U.income_end_date,
+		    U.split_amount  
+		  FROM
+		    (SELECT 
+		      ro.office_id,
+		      vtf.con_id,
+		      elo.contract_id,
+		      ro.customer_id,
+		      vrf.chinesename AS user_name,
+		      reg.product_id,
+		      reg.ex_product_id,
+		      srt.product_name,
+		      elo.charge_begin_date,
+		      elo.charge_end_date,
+		      '12475' AS payment_type,
+		      '技术服务费' AS display_name,
+		      IFNULL(srl.min_consume, 0) AS current_min_income,
+		      fun_get_yearly_begin_date (
+		        elo.charge_begin_date,
+		        elo.prod_begin_date
+		      ) AS yearly_begin_date,
+		      IFNULL(elo.yearly_service_charge, 0) AS yearly_service_charge,
+		      IFNULL(
+		        (SELECT 
+		          SUM(adjust_balance) 
+		        FROM
+		          charge_adjust_bill etl 
+		        WHERE 1 = 1   
+		          <![CDATA[and adjust_date <= elo.charge_end_date ]]>
+		          and etl.contract_id = elo.contract_id),
+		        0
+		      ) AS adjust_amt,
+		      reg.split_ratio,
+		      reg.income_begin_date,
+		      reg.income_end_date,
+		      reg.split_amount
+		    FROM
+		      charge_bill_info elo 
+		      LEFT JOIN 
+		        (SELECT 
+		          contract_id,
+		          MAX(charge_end_date) charge_end_date 
+		        FROM
+		          charge_bill_info a
+		        WHERE belong_type = '1' 
+		        <if test = "charge_month != null and charge_month != ''" > 
+		          and <![CDATA[DATE_FORMAT(charge_end_date, '%Y%m') <= #{charge_month} ]]> 
+		        </if>
+		        and batch_no = (select max(batch_no) from charge_bill_info where contract_id = a.contract_id)
+		        GROUP BY contract_id, fun_get_yearly_end_date (
+			        fun_get_yearly_begin_date (
+			          charge_begin_date,
+			          prod_begin_date
+			        )
+			      )) cbi  
+		        ON elo.contract_id = cbi.contract_id
+		        and elo.charge_end_date = cbi.charge_end_date,
+		      order_income_setting reg,
+		      ss_order_product srt,
+		      ss_order_model srl,
+		      v_contract_jf vtf,
+		      order_info ro 
+		      LEFT JOIN v_customer_jf vrf 
+		        ON vrf.customerid = ro.customer_id 
+		     WHERE <![CDATA[elo.charge_end_date <= cbi.charge_end_date ]]>
+		      and elo.belong_type = '2' 
+		      and reg.contract_id = elo.contract_id 
+		      and reg.payment_type = '12475' 
+		      <![CDATA[and fun_get_yearly_begin_date (
+		        elo.charge_begin_date,
+		        elo.prod_begin_date
+		      ) <= DATE_FORMAT(
+		        reg.income_begin_date,
+		        '%Y-%m-%d'
+		      ) ]]>
+		      and fun_get_yearly_end_date (
+		        fun_get_yearly_begin_date (
+		          elo.charge_begin_date,
+		          elo.prod_begin_date
+		        )
+		      ) >= DATE_FORMAT(reg.income_end_date, '%Y-%m-%d')
+		      and srt.bill_id = elo.bill_id 
+		      and srt.contract_id = elo.contract_id 
+		      and srt.combine_id = elo.combine_id 
+		      and srt.product_id = reg.product_id 
+		      and srl.bill_id = elo.bill_id 
+		      and srl.ref_id = srt.combine_id 
+		      and srl.belong_type = '2' 
+		      and srt.del_flag = '0'
+		      and srl.del_flag = '0'
+		      and vtf.contractid = elo.contract_id 
+		      and ro.contract_id = elo.contract_id
+		      and ro.del_flag = '0'
+		      <if test = "charge_month != null and charge_month != ''" > 
+		  		<![CDATA[ and DATE_FORMAT(cbi.charge_end_date, '%Y%m') <= #{charge_month} ]]>
+			  </if> 
+		    GROUP BY elo.charge_begin_date,
+			        elo.charge_end_date,
+			        elo.contract_id,
+			        elo.combine_id,
+			        reg.product_id
+			ORDER BY elo.charge_end_date DESC) U 
+		  UNION
+		  ALL 
+		  SELECT DISTINCT 
+		    ro.office_id,
+		    vtf.con_id,
+		    ro.contract_id,
+		    ro.customer_id,
+		    vrf.chinesename AS user_name,
+		    re.product_id,
+		    ois.ex_product_id,
+		    re.product_name,
+		    DATE_FORMAT(
+		      MAX(elo.charge_begin_date),
+		      '%Y-%m-%d'
+		    ) AS charge_begin_date,
+		    DATE_FORMAT(MAX(elo.charge_end_date), '%Y-%m-%d') AS charge_end_date,
+		    re.payment_type,
+		    re.display_name,
+		    <![CDATA[ MAX(ROUND(
+		      IFNULL(
+		        CASE
+		          WHEN DATE_FORMAT(elo.charge_end_date, '%Y-%m') >= DATE_FORMAT(ois.income_end_date, '%Y-%m') 
+          		    and ois.split_amount IS NOT NULL 
+          		    and ois.split_amount != '0' 
+          		  THEN ois.split_amount 
+		          WHEN fun_get_date_diff (
+		            elo.charge_end_date,
+		            ois.income_begin_date
+		          ) < 0 
+		          THEN 0 
+		          WHEN re.payment_type IN (12471, 12474) 
+		          and ois.income_end_date >= elo.charge_end_date 
+		          and elo.charge_end_date >= ois.income_begin_date 
+		          THEN re.amount * ois.split_ratio / 100 
+		          WHEN re.payment_type IN (12472, 12473) 
+		          and ois.income_end_date >= elo.charge_end_date 
+		          THEN (
+		            re.amount * ois.split_ratio / 100
+		          ) * fun_get_date_diff (
+		            elo.charge_end_date,
+		            ois.income_begin_date
+		          ) / fun_get_date_diff (
+		            ois.income_end_date,
+		            ois.income_begin_date
+		          ) 
+		          ELSE re.amount * ois.split_ratio / 100 
+		        END,
+		        0
+		      ),
+		      2
+		    ))]]> AS total_income,
+		    ois.income_begin_date,
+		    ois.income_end_date,
+		    ois.split_amount 
+		  FROM
+		    (SELECT 
+		      op.contract_id,
+		      op.combine_id,
+		      rt.prod_begin_date,
+		      rt.prod_end_date,
+		      op.payment_type,
+		      rt.product_name,
+		      CASE
+		        WHEN payment_type = '12471' 
+		        THEN '一次性费用' 
+		        WHEN payment_type = '12472' 
+		        THEN '不定期' 
+		        WHEN payment_type = '12473' 
+		        THEN '年费' 
+		        WHEN payment_type = '12474' 
+		        THEN '条件延后' 
+		        ELSE '' 
+		      END display_name,
+		      rt.product_id,
+		      rt.ex_product_id,
+		      SUM(amount) AS amount,
+		      rt.id 
+		    FROM
+		      order_adv_payment op 
+		      LEFT JOIN 
+		        (SELECT 
+		          t.contract_id,
+		          t.combine_id,
+		          t.product_name,
+		          t.product_id,
+		          t.ex_product_id,
+		          t.prod_begin_date,
+		          t.prod_end_date,
+		          t.id 
+		        FROM
+		          order_product t 
+		        GROUP BY t.contract_id,
+		          t.combine_id,
+		          t.product_id) rt 
+		        ON rt.contract_id = op.contract_id 
+		        and rt.combine_id = op.combine_id 
+		    WHERE op.payment_type != '10000' 
+		    and op.del_flag = '0'
+		    GROUP BY op.contract_id,
+		      op.combine_id,
+		      op.payment_type,
+		      rt.product_id) re 
+		    LEFT JOIN order_income_setting ois 
+		      ON ois.contract_id = re.contract_id 
+		      and ois.payment_type = re.payment_type 
+		      and ois.product_id = re.product_id 
+		      and DATE_FORMAT(ois.income_end_date,'%Y-%m-%d') >= re.prod_begin_date 
+		      <![CDATA[ and DATE_FORMAT(ois.income_begin_date,'%Y-%m-%d') <= re.prod_end_date]]>,
+		    charge_bill_info elo, 
+		    order_info ro 
+		    LEFT JOIN v_customer_jf vrf 
+		      ON vrf.customerid = ro.customer_id,
+		    v_contract_jf vtf 
+		  WHERE elo.belong_type = '3' 
+		    and elo.combine_id = re.combine_id 
+		    and elo.product_id = re.id 
+		    and ro.contract_id = re.contract_id 
+		    and vtf.contractid = ro.contract_id 
+		    and ro.del_flag = '0'
+		    <if test = "charge_month != null and charge_month != ''" > 
+		  		<![CDATA[ and DATE_FORMAT(elo.charge_end_date, '%Y%m') <= #{charge_month} ]]>
+			</if> 
+			GROUP BY con_id,
+			  ois.income_begin_date,
+			  ois.income_end_date,
+			  payment_type,
+			  product_id) V
+		  LEFT JOIN v_contract_detail_jf vtlf 
+		    ON V.con_id = vtlf.con_id 
+		    and V.ex_product_id = vtlf.salprd_id 
+		    and V.payment_type = vtlf.chargetype 
+		    and DATE_FORMAT(V.income_begin_date, '%Y-%m-%d') >= vtlf.servicestartdate 
+		    <![CDATA[ and DATE_FORMAT(V.income_end_date, '%Y-%m-%d') <= vtlf.serviceenddate]]>
+		WHERE 1=1
+		<if test="office_id != null and office_id != '' ">
+		  and V.office_id in (${office_id}) 
+		</if>
+		ORDER BY V.contract_id DESC,
+		  V.payment_type DESC,
+		  V.charge_end_date DESC 
+	</select>
+	<!-- 财务收入接口数据查询list -->
+	<select id="queryFinanceIncomeList" parameterType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm"
+		resultType="java.util.Map">
+		select 
+		  cfi.batch_no,
+		  cfi.office_id,
+		  cfi.con_id,
+		  cfi.contract_id,
+		  vpj.productid as product_id,
+		  DATE_FORMAT(cfi.charge_begin_date, '%Y-%m-%d') charge_begin_date,
+		  DATE_FORMAT(cfi.charge_end_date, '%Y-%m-%d') charge_end_date,
+		  cfi.payment_type,
+		  cfi.total_finance_income,
+		  cfi.detailid,
+		  vpj.productname,
+		  cfi.update_flag
+		<include refid="financeIncomeCondition"></include>
+		ORDER BY cfi.batch_no DESC,cfi.charge_end_date DESC
+	</select>
+	<!-- 统一接口业务数据查询条件 -->
+	<sql id="financeIncomeCondition">
+		FROM
+		  charge_income_interface cfi
+		  LEFT JOIN v_prdsale_jf vpj
+		  ON cfi.ex_product_id = vpj.prdid
+		WHERE 1=1
+		<if test="charge_month != null and charge_month != ''">  
+		  <![CDATA[and DATE_FORMAT(cfi.charge_begin_date, '%Y%m') <= #{charge_month}
+		  	and DATE_FORMAT(cfi.charge_end_date, '%Y%m') >= #{charge_month}]]>
+		</if>
+		<if test="contract_id != null and contract_id != ''">  
+		  	and cfi.contract_id LIKE CONCAT('%', #{contract_id},'%')
+		</if>
+        <if test="product_id !=null and product_id !='' ">
+			and vpj.productid LIKE CONCAT('%', #{product_id},'%')
+        </if>
+        <if test="product_name !=null and product_name !='' ">
+			and vpj.productname LIKE CONCAT('%', #{product_name},'%')
+        </if>
+        <if test="payment_type !=null and payment_type !='' ">
+			and cfi.payment_type  = #{payment_type}
+        </if>
+        <if test="update_flag !=null and update_flag !='' ">
+			and cfi.update_flag  = #{update_flag}
+        </if>
+        <if test="office_id != null and office_id != '' ">
+		  	and cfi.office_id in (${office_id}) 
+		</if>
+	</sql>
+	
+	<!-- 产品级明细 -->
+	<select id="exportProductDetail"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm"
+		resultType="java.util.Map">
+		SELECT 
+		  ro.office_id,
+		  vtf.dept_name,
+		  vrf.chinesename,
+		  ro.customer_id,
+		  ete.contract_id,
+		  ete.charge_month,
+		  IFNULL(ete.income,0) AS income,
+		  IFNULL(ete.change_income,0) AS change_income,
+		  IFNULL(ete.service_charge,0) AS service_charge,
+		  IFNULL(ete.change_service_charge,0) AS change_service_charge,
+		  ete.product_id,
+		  vef.productname
+		FROM 
+		  charge_monthly_product_income ete
+		  LEFT JOIN order_info ro 
+			ON ete.contract_id = ro.contract_id 
+	      LEFT JOIN v_customer_jf vrf 
+			ON ro.customer_id = vrf.customerid 
+		  LEFT JOIN v_prdsale_jf vef
+			ON ete.product_id = vef.productid 
+	      LEFT JOIN v_department_jf vtf 
+			ON ro.office_id = vtf.hs_dept_id 
+		WHERE 1=1
+		<if test="charge_month != null and charge_month != ''">  
+		  <![CDATA[AND ete.charge_month <= #{charge_month}]]>
+		</if>
+		<if test="contract_id != null and contract_id != ''">  
+		  	AND ete.contract_id LIKE CONCAT('%', #{contract_id},'%')
+		</if>
+		<if test="office_id != null and office_id != '' ">
+		  AND ro.office_id in (${office_id}) 
+		</if>
+		ORDER BY ro.office_id, ete.contract_id, ete.charge_month
+	</select>
+	
+	<!-- 合同级明细 -->
+	<select id="exportContractDetail"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm"
+		resultType="java.util.Map">
+		SELECT 
+		  ro.office_id,
+		  vtf.dept_name,
+		  vrf.chinesename,
+		  ro.customer_id,
+		  ete.contract_id,
+		  ete.charge_month,
+		  IFNULL(ete.income,0) AS income,
+		  IFNULL(ete.change_income,0) AS change_income,
+		  IFNULL(ete.service_charge,0) AS service_charge,
+		  IFNULL(ete.change_service_charge,0) AS change_service_charge,
+		  IFNULL(ete.receiveable,0) AS receiveable,
+		  IFNULL(ete.payable,0) AS payable
+		FROM 
+		  charge_monthly_contract_income ete
+		  LEFT JOIN order_info ro 
+			ON ete.contract_id = ro.contract_id 
+	      LEFT JOIN v_customer_jf vrf 
+			ON ro.customer_id = vrf.customerid 
+	      LEFT JOIN v_department_jf vtf 
+			ON ro.office_id = vtf.hs_dept_id 
+		WHERE 1=1
+		<if test="charge_month != null and charge_month != ''">  
+		  <![CDATA[AND ete.charge_month <= #{charge_month}]]>
+		</if>
+		<if test="contract_id != null and contract_id != ''">  
+		  	AND ete.contract_id LIKE CONCAT('%', #{contract_id},'%')
+		</if>
+		<if test="office_id != null and office_id != '' ">
+		  AND ro.office_id in (${office_id}) 
+		</if>
+		ORDER BY ro.office_id, ete.contract_id, ete.charge_month
+	</select>
+	
+	<!-- 公司级明细 -->
+	<select id="exportBUDetail"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm"
+		resultType="java.util.Map">
+		SELECT 
+		  ro.office_id,
+		  vtf.dept_name,
+		  ete.charge_month,
+		  SUM(IFNULL(ete.income,0)) AS income,
+		  SUM(IFNULL(ete.change_income,0)) AS change_income,
+		  SUM(IFNULL(ete.service_charge,0)) AS service_charge,
+		  SUM(IFNULL(ete.change_service_charge,0)) AS change_service_charge,
+		  SUM(IFNULL(ete.receiveable,0)) AS receiveable,
+		  SUM(IFNULL(ete.payable,0)) AS payable
+		FROM 
+		  charge_monthly_contract_income ete
+		  LEFT JOIN order_info ro 
+			ON ete.contract_id = ro.contract_id 
+	      LEFT JOIN v_department_jf vtf 
+			ON ro.office_id = vtf.hs_dept_id 
+		WHERE 1=1
+		<if test="charge_month != null and charge_month != ''">  
+		  <![CDATA[AND ete.charge_month <= #{charge_month}]]>
+		</if>
+		<if test="office_id != null and office_id != '' ">
+		  AND ro.office_id in (${office_id}) 
+		</if>
+		GROUP BY ro.office_id,ete.charge_month 
+		ORDER BY ro.office_id, ete.charge_month
+	</select>
+</mapper>

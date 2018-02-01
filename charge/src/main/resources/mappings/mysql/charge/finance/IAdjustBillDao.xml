@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hundsun.boss.modules.charge.dao.finance.AdjustBillDao">
+	<!-- 新增账单调整记录-->
+	<insert id="insertAdjustBill"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.AdjustBillForm">
+		insert into charge_adjust_bill
+	<trim prefix="(" suffix=")" suffixOverrides=",">  
+		<if test="true">id,</if>
+		<if test="true">create_datetime,</if>
+		<if test="true">modi_datetime,</if>
+		<if test="adjust_date != null and adjust_date != ''">adjust_date,</if>
+		<if test="contract_id != null and contract_id != ''">contract_id,</if>
+		<if test="customer_id != null and customer_id != ''">customer_id,</if>
+		<if test="user_name != null and user_name != ''">user_name,</if>
+		<if test="adjust_balance != null and adjust_balance != ''">adjust_balance,</if>
+		<if test="bill_adjust_status != null and bill_adjust_status != ''">bill_adjust_status,</if>
+		<if test="operater_no != null and operater_no != ''">operater_no,</if>
+		<if test="remark != null and remark != ''">remark,</if>
+	</trim>
+	<trim prefix="values (" suffix=")" suffixOverrides=",">
+		<if test="true">REPLACE(UUID(), '-', ''),</if>
+		<if test="true">now(),</if>
+		<if test="true">now(),</if>
+		<if test="adjust_date != null and adjust_date != ''">#{adjust_date},</if>
+		<if test="contract_id != null and contract_id != ''">#{contract_id},</if>
+		<if test="customer_id != null and customer_id != ''">#{customer_id},</if>
+		<if test="user_name != null and user_name != ''">#{user_name},</if>
+		<if test="adjust_balance != null and adjust_balance != ''">#{adjust_balance},</if>
+		<if test="bill_adjust_status != null and bill_adjust_status != ''">#{bill_adjust_status},</if>
+		<if test="operater_no != null and operater_no != ''">#{operater_no},</if>
+		<if test="remark != null and remark != ''">#{remark},</if>
+	</trim>
+	</insert>
+	<!-- 查询账单调整记录 -->
+	<select id="queryAdjustBill"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.AdjustBillForm"
+		resultType="java.util.Map">
+		select
+			a.id,
+			a.adjust_date,
+			a.contract_id,
+			a.customer_id,
+			a.user_name,
+			a.adjust_balance,
+			a.bill_adjust_status,
+			c.customermanagername,
+			c.customermanager2name,
+			oi.office_id
+		from charge_adjust_bill a
+		left join v_customer_jf c
+		on a.customer_id = c.customerid
+		left join order_info oi 
+		on a.contract_id = oi.contract_id
+		<where>
+			1=1
+			<if test="begin_date !=null and begin_date !='' ">
+				  <![CDATA[ and DATE_FORMAT(a.adjust_date, '%Y%m%d') >=DATE_FORMAT(#{begin_date},'%Y%m%d')]]>
+			</if>
+			<if test="end_date !=null and end_date !='' ">
+				  <![CDATA[ and DATE_FORMAT(a.adjust_date, '%Y%m%d') <=DATE_FORMAT(#{end_date},'%Y%m%d')]]>
+			</if>
+			<if test="contract_id != null and contract_id != ''">
+				and a.contract_id like concat('%', #{contract_id}, '%')
+			</if>
+			<if test="customer_id != null and customer_id != ''">
+				and a.customer_id like concat('%', #{customer_id}, '%')
+			</if>
+			<if test="user_name != null and user_name != ''">
+				and a.user_name like concat('%', #{user_name}, '%')
+			</if>
+			<if test="office_id !=null and office_id !='' ">   
+          		and oi.office_id = #{office_id}
+        	</if>
+			<if test="dept != null and dept !=''">
+	 			AND oi.office_id in (${dept}) 
+	 		</if>
+			order by a.id desc
+		</where>
+	</select>
+	<!-- 修改账单调整金额-->
+	<update id="updateAdjustBill"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.AdjustBillForm">
+		update charge_adjust_bill
+		<set>
+			<if test="adjust_balance != null and adjust_balance !='' ">
+				adjust_balance = #{adjust_balance},
+			</if>
+			<if test="remark != null and remark !='' ">
+				remark = #{remark},
+			</if>
+			modi_datetime= now()
+		</set>
+		where id = #{id}
+	</update>
+	<!-- 获得账单调整记录-->
+	<select id="getAdjustBill"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.AdjustBillForm"
+		resultType="com.hundsun.boss.modules.charge.form.finance.AdjustBillForm">
+		select
+			a.id,
+			a.adjust_date,
+			a.contract_id,
+			a.customer_id,
+			a.user_name,
+			a.adjust_balance,
+			a.bill_adjust_status,
+			a.remark
+		from charge_adjust_bill a
+		where a.id = #{id}
+	</select>
+	<!-- 删除账单调整记录-->
+	<delete id="deleteAdjustBill"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.AdjustBillForm">
+		delete from charge_adjust_bill  
+		where id = #{id}
+	</delete>
+	
+</mapper>

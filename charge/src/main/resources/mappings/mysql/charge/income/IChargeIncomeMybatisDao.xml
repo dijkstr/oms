@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hundsun.boss.modules.charge.dao.income.ChargeIncomeMybatisDao">
+
+	<select id="get" parameterType="com.hundsun.boss.modules.charge.form.income.ChargeIncomeForm"
+		resultType="com.hundsun.boss.modules.charge.entity.income.ChargeIncomeInterface">
+	SELECT
+		detailid,
+		begindate,
+		enddate,
+		incomedate,
+		contractid,
+		productid,
+		product_id,
+  		productname,
+		chargetype,
+		allincomemny
+	FROM	
+		(
+		SELECT 
+			detailid,
+			income_begin_date as begindate,
+			income_end_date as enddate,
+			DATE_FORMAT(charge_end_date, '%Y-%m') as incomedate,
+			contract_id as contractid,
+			ex_product_id as productid,
+			vpj.productid AS product_id,
+    		vpj.productname,
+			payment_type as chargetype,
+			SUM(IFNULL(total_finance_income, 0)) as allincomemny
+		FROM
+			charge_income_interface a
+    		LEFT JOIN v_prdsale_jf vpj ON vpj.prdid = a.ex_product_id
+		WHERE 1 = 1
+			AND update_flag = '0'
+			<if test="incomemonths != null and incomemonths !=''">
+		 		<![CDATA[ AND DATE_FORMAT(charge_end_date, '%Y-%m') <= #{incomemonths}  ]]>
+		 	</if>
+			AND CONCAT(detailid, '-', charge_end_date, '-', batch_no) IN (
+				SELECT
+					max(CONCAT(detailid, '-', charge_end_date, '-', batch_no))
+				FROM
+					charge_income_interface
+				WHERE 1 = 1
+					AND update_flag = '0'
+					<if test="incomemonths != null and incomemonths !=''">
+			 			<![CDATA[ AND DATE_FORMAT(charge_end_date, '%Y-%m') <= #{incomemonths}  ]]>
+			 		</if>
+				GROUP BY detailid) 
+			GROUP BY detailid
+		)t 
+		<if test="offset != null and offset !=''">		
+	    LIMIT #{offset}, #{pagesize}
+	    </if>
+	</select>
+	<update id="update" parameterType="java.lang.String" >
+		UPDATE 
+		   charge_income_interface 
+		SET update_flag='1' 
+		WHERE (SELECT prop_code FROM tsys_config WHERE prop_name='update_flag')='1'
+		   AND update_flag = '0' 
+		   <if test="_parameter != null and _parameter !=''">
+			   <![CDATA[ AND DATE_FORMAT(charge_end_date, '%Y-%m') <= #{_parameter}  ]]>
+		  </if>
+	</update>
+	<insert id="backup" parameterType="java.lang.String">  
+    	insert into charge_income_backup (
+	    	office_id,
+			con_id,
+			contract_id,
+			ex_product_id,
+			charge_begin_date,
+			charge_end_date,
+			payment_type,
+			total_finance_income,
+			detailid,
+			income_begin_date,
+			income_end_date,
+			update_flag,
+			batch_no,
+			product_id,
+			change_income )   
+	    SELECT 
+			office_id,
+			con_id,
+			contract_id,
+			ex_product_id,
+			charge_begin_date,
+			charge_end_date,
+			payment_type,
+			total_finance_income,
+			detailid,
+			income_begin_date,
+			income_end_date,
+			update_flag,
+			batch_no,
+			product_id,
+			change_income
+		FROM
+			charge_income_interface
+		WHERE 1 = 1
+			AND update_flag = '0'
+			<if test="_parameter != null and _parameter !=''">
+		 		<![CDATA[ AND DATE_FORMAT(charge_end_date, '%Y-%m') <= #{_parameter}  ]]>
+		 	</if>
+			AND CONCAT(detailid, '-', charge_end_date, '-', batch_no) IN (
+				SELECT
+					max(CONCAT(detailid, '-', charge_end_date, '-', batch_no))
+				FROM
+					charge_income_interface
+				WHERE 1 = 1
+					AND update_flag = '0'
+					<if test="_parameter != null and _parameter !=''">
+			 			<![CDATA[ AND DATE_FORMAT(charge_end_date, '%Y-%m') <= #{_parameter}  ]]>
+			 		</if>
+				GROUP BY detailid)
+	</insert>
+	<update id="deleteIncomeByContractId" parameterType="java.lang.String" >
+		DELETE FROM charge_income_interface WHERE contract_id = #{_parameter}
+	</update>
+	
+</mapper>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<columns>
+	<column header="计费月份" type="string" field="charge_month"/>
+	<column header="业务单元" type="string" field="bu_name" />
+	<column header="所属部门" type="string" field="belong_name" />
+	<column header="客户编号" type="string" field="cust_id" />
+	<column header="客户名称" type="string" field="cust_name" />
+	<column header="合同编号" type="string" field="order_id" />
+	<column header="本期固定收入" type="number" field="current_base_income" format="#,##0.##"/>
+	<column header="本期计费金额" type="number" field="current_charge_amt" format="#,##0.##"/>
+	<column header="本期调账金额" type="number" field="current_adjust_amt" format="#,##0.##"/>
+	<column header="本期收入" type="number" field="current_income" format="#,##0.##"/>
+	<column header="期初累计收入-财务" type="number" field="cumulative_total_income" format="#,##0.##"/>
+	<column header="累计收入" type="number" field="total_income" format="#,##0.##"/>
+	<column header="累计调账金额" type="number" field="total_adjust_amt" format="#,##0.##"/>
+	<column header="本期收款" type="number" field="current_receive" format="#,##0.##"/>
+	<column header="累计收款" type="number" field="total_receive" format="#,##0.##"/>
+	<column header="本期账户余额" type="number" field="current_account_left" format="#,##0.##"/>
+</columns>

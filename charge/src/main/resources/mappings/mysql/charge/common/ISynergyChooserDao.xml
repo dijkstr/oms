@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hundsun.boss.modules.charge.dao.common.MyBatisSyncChooserDao">
+    
+    <!-- 获取所有的协同id信息. -->
+	<select id="queryXtProds"
+		parameterType="com.hundsun.boss.modules.charge.form.common.SyncProductForm"
+		resultType="com.hundsun.boss.modules.charge.form.common.SyncProductForm">
+		SELECT 
+		  vtf.contractid,
+		  vef.productid,
+		  vef.productname,
+		  vef.productid_tec,
+		  vef.productname_tec,
+		  vef.lineid,
+		  vef.linename,
+		  vef.createdate,
+		  vef.updatedate,
+		  vef.prdid 
+		<include refid="queryXtProdIds_condition" />
+		
+	</select>
+
+	<!-- 获取符合条件的协同id信息的条目数 -->
+	<select id="queryXtProdsCount"
+		parameterType="com.hundsun.boss.modules.charge.form.common.SyncProductForm"
+		resultType="int">
+		SELECT 
+		  count(*)
+		<include refid="queryXtProdIds_condition" />
+	</select>
+	
+	<sql id="queryXtProdIds_condition">
+		FROM
+		  v_prdsale_jf vef 
+		  LEFT JOIN 
+		    (SELECT 
+		      TRIM(vcj.contractid) AS contractid,
+		      TRIM(vcdj.salprd_id) AS salprd_id 
+		    FROM
+		      v_contract_jf vcj,
+		      v_contract_detail_jf vcdj 
+		    WHERE vcj.con_id = vcdj.con_id) vtf 
+		    ON vtf.salprd_id = vef.prdid
+		   where 1=1 
+		<if test="contractid != null and contractid !=''">
+			and vtf.contractid = #{contractid}
+		</if>
+		<if test="productname != null and productname !=''">
+			and vef.productname like concat("%",#{productname},"%")
+		</if>
+		<if test="prdid != null and prdid != '' ">
+			and vef.prdid like concat("%",#{prdid},"%")
+		</if>
+		<if test="productid != null and productid != '' ">
+			and vef.productid like concat('%',#{productid},'%')
+		</if>
+		AND vef.productid IS NOT NULL
+	</sql>
+	
+</mapper>

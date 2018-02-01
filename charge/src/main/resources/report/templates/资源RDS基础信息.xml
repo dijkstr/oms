@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<columns>
+	<column header="部门" type="string" field="department_id" dict="res_apply_depart" iskey="true"/>
+	<column header="业务分组" type="string" field="project_name"/>
+	<column header="服务类型" type="string" field="deploy_env" dict="res_deploy_env"/>
+	<column header="rds名称" type="string" field="domain_name" iskey="true"/>
+	<column header="数据库类型" type="string" field="database_type" />
+	<column header="价格" type="string" field="price" />
+</columns>

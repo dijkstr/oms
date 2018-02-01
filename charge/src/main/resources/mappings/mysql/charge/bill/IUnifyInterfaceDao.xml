@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hundsun.boss.modules.charge.dao.bill.ChargeUnifyInterfaceDao">
+	<!-- 统一接口业务数据查询list -->
+	<select id="BusiDataList" parameterType="com.hundsun.boss.modules.charge.form.bill.ChargeUnifyInterface"
+		resultType="java.util.Map">
+		SELECT 
+		  cui.batch_no,
+		  cui.contract_id,
+		  DATE_FORMAT(cui.oc_date, '%Y-%m-%d') AS oc_date,
+		  cui.customer_id,
+		  oi.office_id,
+		  cui.product_id,
+		  cui.fee_type,
+		  cui.data1,
+		  cui.data2,
+		  cui.data3,
+		  cui.data4,
+		  cui.data5,
+		  oi.office_id as department
+		<include refid="BusiDataCondition"></include>
+		ORDER BY cui.batch_no DESC, cui.contract_id, cui.oc_date, cui.product_id, cui.fee_type 
+	</select>
+	<!-- 统一接口业务数据查询条件 -->
+	<sql id="BusiDataCondition">
+		FROM
+		  charge_unify_interface cui,
+		  order_info oi
+		WHERE oi.contract_id = cui.contract_id
+		<if test="batch_no != null and batch_no != ''">  
+		  and cui.batch_no LIKE CONCAT('%', #{batch_no},'%')
+		</if>
+		<if test="contract_id != null and contract_id != ''">  
+		  and cui.contract_id = #{contract_id}
+		</if>
+		<if test="customer_id !=null and customer_id !='' ">   
+          and cui.customer_id = #{customer_id}
+        </if>
+       
+        <if test="product_id !=null and product_id !='' ">
+			and cui.product_id = #{product_id}
+        </if>
+        <if test="fee_type !=null and fee_type !='' ">
+			and cui.fee_type  = #{fee_type}
+        </if>
+		<if test="charge_begin_month != null and charge_begin_month != ''">  
+		  <![CDATA[ AND DATE_FORMAT(cui.oc_date, '%Y%m') >= #{charge_begin_month}]]>
+		</if>
+		<if test="charge_end_month != null and charge_end_month != ''">  
+		  <![CDATA[AND DATE_FORMAT(cui.oc_date, '%Y%m') <= #{charge_end_month}]]>
+		</if>
+		<if test="office_id != null and office_id !=''">
+	 		and oi.office_id in (${office_id}) 
+	 	</if>
+	</sql>
+
+</mapper>

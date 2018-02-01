@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hundsun.boss.modules.charge.dao.bill.ChargeReceiptBillDao">
+	<!-- 查询详单记录 -->
+	<select id="queryChargeReceipt" parameterType="com.hundsun.boss.modules.charge.form.bill.ChargeReceiptForm"
+		resultType="java.util.Map">
+		SELECT 
+		  sro.office_id,
+		  vtf.dept_name AS department,
+		  elo.bill_id,
+		  elo.batch_no,
+		  DATE_FORMAT(elo.charge_begin_date, '%Y-%m') AS charge_begin_date,
+		  elo.contract_id,
+		  sro.customer_id,
+		  vrf.chinesename AS user_name,
+		  srt.product_id,
+		  srt.product_name,
+		  srl.feemodel_name,
+		  (case when srl.fee_formula > 2
+		  	then null
+		  	else elo.fee_ratio * 1000
+		  end) AS fee_ratio,
+		  elo.charge_amt,
+		  elo.service_charge,
+		  elo.org_amt,
+		  elo.product_id as id,
+		  srl.fix_charge_type,
+		  (case 
+		  	when srl.fix_charge_type = 1
+			then '日结'
+			else '月结'
+			end) as fix_charge_type_name
+		FROM
+		  charge_bill_info elo 
+		  LEFT JOIN ss_order_model srl 
+		    ON elo.bill_id = srl.bill_id 
+		    AND elo.feemodel_id = srl.id 
+		  LEFT JOIN ss_order_product srt 
+		    ON elo.bill_id = srt.bill_id 
+		    AND elo.product_id = srt.id 
+		  LEFT JOIN ss_order_info sro 
+		    ON elo.bill_id = sro.bill_id 
+		  LEFT JOIN v_customer_jf vrf 
+		    ON vrf.customerid = sro.customer_id 
+		  LEFT JOIN v_department_jf vtf 
+		    ON sro.office_id = vtf.hs_dept_id
+		<where>
+			elo.belong_type = '3'
+			and elo.org_amt IS NOT NULL
+			and elo.service_charge IS NOT NULL
+			<if test="charge_begin_month != null and charge_begin_month != ''">  
+			  <![CDATA[ and DATE_FORMAT(elo.charge_begin_date, '%Y%m') >= #{charge_begin_month}]]>
+			</if>
+			<if test="charge_end_month != null and charge_end_month != ''">  
+			  <![CDATA[and DATE_FORMAT(elo.charge_begin_date, '%Y%m') <= #{charge_end_month}]]>
+			</if>
+			<if test="bill_id != null and bill_id !=''">
+				and elo.bill_id = #{bill_id}
+			</if>
+			<if test="contract_id != null and contract_id != ''">
+				and elo.contract_id LIKE CONCAT('%', #{contract_id},'%')
+			</if>
+			<if test="customer_id != null and customer_id != ''">
+				and sro.customer_id =#{customer_id}
+			</if>
+			<if test="user_name !=null and user_name !='' ">
+				and vrf.chinesename LIKE CONCAT('%', #{user_name},'%')
+	        </if>
+	        <if test="fix_charge_type !=null and fix_charge_type !='' ">
+				and srl.fix_charge_type = #{fix_charge_type}
+	        </if>
+			<if test="office_id !=null and office_id !='' ">   
+          		and sro.office_id = #{office_id}
+        	</if>
+	        <if test="dept !=null and dept !='' ">   
+	        	and sro.office_id in (${dept}) 
+	        </if>
+			order by elo.batch_no DESC, elo.bill_id
+		</where>
+	</select>
+	<!-- 查询详单记录 -->
+	<select id="getChrargeReceiptList" parameterType="com.hundsun.boss.modules.charge.form.bill.ChargeReceiptForm"
+		resultType="java.util.Map">
+		SELECT 
+		  sro.office_id,
+		  vtf.dept_name AS department,
+		  elo.bill_id,
+		  elo.batch_no,
+		  elo.charge_begin_date,
+		  elo.contract_id,
+		  sro.customer_id,
+		  vrf.chinesename AS user_name,
+		  srt.product_id,
+		  srt.product_name,
+		  srl.feemodel_name,
+		  (case when srl.fee_formula > 2
+		  	then null
+		  	else elo.fee_ratio * 1000
+		  end) AS fee_ratio,
+		  elo.charge_amt,
+		  elo.service_charge,
+		  elo.org_amt,
+		  (case 
+		  	when srl.fix_charge_type = 1
+			then '日结'
+			else '月结'
+			end) as fix_charge_type_name
+		FROM
+		  charge_receipt elo 
+		  LEFT JOIN ss_order_model srl 
+		    ON elo.bill_id = srl.bill_id 
+		    AND elo.feemodel_id = srl.id 
+		  LEFT JOIN ss_order_product srt 
+		    ON elo.bill_id = srt.bill_id 
+		    AND elo.product_id = srt.id 
+		  LEFT JOIN ss_order_info sro 
+		    ON elo.bill_id = sro.bill_id 
+		  LEFT JOIN v_customer_jf vrf 
+		    ON vrf.customerid = sro.customer_id 
+		  LEFT JOIN v_department_jf vtf 
+		    ON sro.office_id = vtf.hs_dept_id
+		<where>
+			1 = 1
+			and elo.org_amt IS NOT NULL
+			and elo.service_charge IS NOT NULL
+			<if test="charge_begin_month != null and charge_begin_month != ''">  
+			  <![CDATA[ and DATE_FORMAT(elo.charge_begin_date, '%Y%m') >= #{charge_begin_month}]]>
+			</if>
+			<if test="charge_end_month != null and charge_end_month != ''">  
+			  <![CDATA[and DATE_FORMAT(elo.charge_begin_date, '%Y%m') <= #{charge_end_month}]]>
+			</if>
+			<if test="bill_id != null and bill_id !=''">
+				and elo.bill_id = #{bill_id}
+			</if>
+	        <if test="batch_no !=null and batch_no !=''">
+				and elo.batch_no = #{batch_no}
+	        </if>
+			<if test="id !=null and id !=''">   
+          		and elo.product_id = #{id}
+        	</if>
+        	<if test="contract_id != null and contract_id != ''">
+				and elo.contract_id LIKE CONCAT('%', #{contract_id},'%')
+			</if>
+			<if test="customer_id != null and customer_id != ''">
+				and sro.customer_id =#{customer_id}
+			</if>
+			<if test="user_name !=null and user_name !='' ">
+				and vrf.chinesename LIKE CONCAT('%', #{user_name},'%')
+	        </if>
+	        <if test="fix_charge_type !=null and fix_charge_type !='' ">
+				and srl.fix_charge_type = #{fix_charge_type}
+	        </if>
+	        <if test="office_id !=null and office_id !='' ">   
+          		and sro.office_id = #{office_id}
+        	</if>
+	        <if test="dept !=null and dept !='' ">   
+	        	and sro.office_id in (${dept}) 
+	        </if>
+			order by elo.batch_no DESC, elo.bill_id, elo.charge_begin_date
+		</where>
+	</select>
+
+</mapper>

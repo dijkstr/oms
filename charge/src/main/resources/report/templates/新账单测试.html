@@ -1,0 +1,569 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+	<head>
+	<meta http-equiv="Content-Type" content="text/html;" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+	<style type="text/css">
+	@page {
+		size: landscape;
+		width: 29.7cm;
+		height: 21cm;
+		@bottom-center{
+			content:	""	counter(page)	" /"	counter(pages);
+		}
+	
+		@top-center {
+			content: element(header)
+		}
+		}
+		body {
+			font-family: "Microsoft YaHei" ! important;
+		}
+		
+		div.header {
+			display: block;
+			text-align: center;
+			position: running(header);
+		}
+		
+		div.footer {
+			display: block;
+			text-align: center;
+			position: running(footer);
+		}
+		div.pageNext{page-break-after: always;}
+		
+		@media print {
+			table {
+				page-break-after: auto;
+				-fs-table-paginate: paginate;
+			}
+			tr {
+				page-break-inside: avoid;
+				page-break-after: auto
+			}
+			td {
+				page-break-inside: avoid;
+				page-break-after: auto
+			}
+			thead {
+				display: table-header-group
+			}
+			tfoot {
+				display: table-footer-group
+			}
+			tbody {
+				display:table-row-group;
+			}
+			thead {
+				display:table-header-group;
+			}
+		}
+		body{font-family: "Microsoft YaHei" ! important; color:#666; }
+		input{font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;}
+		a{text-decoration:none; color:#60ace8; cursor:pointer;}
+		input{outline:none;}
+		input:focus{
+		-webkit-tap-highlight-color:rgba(0,0,0,0);
+		-webkit-user-modify:read-write-plaintext-only;
+		}
+		a:hover{
+		color:#60ace8;
+		}
+		a:focus {
+		outline: thin dotted;
+		outline: 5px auto -webkit-focus-ring-color;
+		outline-offset: -2px;
+		}
+		body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,code,form,fieldset,legend,input,textarea,p,blockquote,th,td{
+		  margin:0;
+		  padding:0
+		}
+		.table {
+			border: 0px; 
+			border-right: 1px solid #e8e8e8;
+			border-top: 1px solid #e8e8e8;
+			border-spacing: 0;
+			table-layout: fixed;
+		}
+		
+		fieldset,img {
+		  border:0
+		}
+		address,caption,cite,code,dfn,em,strong,th,var {
+		  font-style:normal;
+		  font-weight:400
+		}
+		li {
+		  list-style:none
+		}
+		caption,th {
+		  text-align:left
+		}
+		h1,h2,h3,h4,h5,h6 {
+		  font-size:100%;
+		  font-weight:400
+		}
+		
+		.clearfix:after { content: "."; display: block; height: 0; clear: both; visibility: hidden; }
+		.clearfix::before, .clearfix::after {
+		display: table;
+		content: "";
+		line-height: 0;
+		}
+		ul.listLateral li{float:left;list-style:none; display:inline-block;}
+		.firstLi {
+		margin-top: 0!important;
+		}
+		.lastLi {
+		margin-bottom: 0!important;
+		padding-bottom: 0!important;
+		}
+		 
+		.order_gb{ width: 100%; margin: 5px 0px auto 15px; padding-bottom: 10px; background: #fff;}
+		.order_gb .title{ margin: 10px auto; text-align: center; font-size: 24px; color: #000;}
+		.order_gb .content{ width: 100%; margin: 0 auto;}
+		.order_gb .content h3{ margin-bottom: 24px; padding-bottom: 6px; border-bottom: 1px solid #000; color: #000; font-size: 16px;width:97%;}
+		.order_gb .content .comp_name{ float: left; font-size: 24px; color: #000; margin-bottom: 8px;}
+		.order_gb .content .order_time{ float: right; margin-top: 5px; font-size: 16px; color: #333;margin-right: 109px;}
+		.order_gb .content .qgray{ width: 94%; height: 80px; padding: 0 15px; background: #f2f2f2;}
+		.order_gb .content .qgray li{ }
+		.order_gb .content .qgray li .num{ }
+		/*--------------璧勭璐﹀崟*/
+		.order_gb .content .qgray_d{ float: left; width: 98px; height: 43px; line-height: 43px; margin: 8px 8px 32px 0; padding-left: 15px; border: 1px solid #e8e8e8; background: #e4e4e4; font-size: 17px; color: #333;}
+		.order_gb .content .qgray_l{ float: left; width: 84%; height: 43px; line-height: 43px; margin: 8px 0 32px 0; padding-left: 10px; border: 1px solid #e8e8e8; background: #e4e4e4; font-size: 12px; color: #333;}
+		.order_gb .content .qgray_l li{ float: left; width: 33%; font-size: 12px;}
+		.order_gb .content .tc_table{ margin-bottom: 34px; border-bottom: 1px solid #e8e8e8; font-size: 14px; color: #333;}
+		.order_gb .content .tc_table li{ float: left; width: 480px; height: 38px; padding-left: 160px; border: 1px solid #e8e8e8; border-bottom: none; line-height: 38px; background: #fff;}
+		.order_gb .content .tc_table li.th{ width: 295px; padding-left: 66px; background: #fcfcfc; border-right: none;}
+		.order_gb .content .order_gb_table{ width: 98%; margin-bottom: 30px; border: 1px solid #e8e8e8; border-right: 0px; border-bottom: 0px; color: #333; font-size: 14px;table-layout: fixed;}
+		.order_gb .content .order_gb_table tr th{ height: 40px; line-height: 40px; border-right: 1px solid #e8e8e8; border-bottom: 1px solid #e8e8e8; background: #fcfcfc; text-align: center;}
+		.order_gb .content .order_gb_table tbody tr td{ height: 40px; line-height: 40px; border-right: 1px solid #e8e8e8; border-bottom: 1px solid #e8e8e8; background: #fff; text-align: center;word-break: break-all; word-wrap: break-word;}
+		.order_gb .content .order_gb_table tr td p{ margin: 10px 0; line-height: 16px;}
+		.order_gb .content .order_gb_table tfoot tr td p{ height: 16px; line-height: 17px; margin-right: 10px; text-align: right;}
+		
+		.pay_table{
+			margin-top: 10px;
+			margin-bottom: 10px;
+			width: 97%;
+			table-layout: fixed;
+			line-height:30px;
+			background: #f2f2f2;
+		}
+		
+		.pay_table .title{
+			text-align: left;
+			font-size: 16px; 
+		}
+		
+		.pay_table .content{
+			text-align: left;
+			font-size: 24px;
+		}
+		
+		.qgray_table{
+			margin-top: 10px;
+			margin-bottom: 20px;
+			width: 100%;
+			table-layout: fixed;
+			line-height:30px;
+			background: #e4e4e4; 
+		}
+		
+		.qgray_table th {
+			vertical-align:middle;
+			font-size: 18px; 
+			color: #333;
+		}
+		
+		.qgray_table td {
+			font-size: 16px;
+			word-break: break-all; 
+			word-wrap: break-word;
+		}
+		
+		.qgray_inner_table{ 
+			margin-left: 10px;
+			border: 0px; 
+			table-layout: fixed;
+			line-height:30px;
+			table-layout: fixed;
+		}
+		
+		.qgray_inner_table td {
+			width: 10%;
+			word-break: break-all; 
+			word-wrap: break-word;
+			font-size: 14px;
+		}
+		
+		.gridtable {
+			margin-top: 10px;
+			margin-bottom: 20px;
+			width:100%;
+			border: 0px; 
+			border-right: 1px solid #e8e8e8;
+			border-top: 1px solid #e8e8e8;
+			border-spacing: 0;
+			table-layout: fixed;
+		}
+		
+		.gridtable tr {
+			
+		}
+		
+		.gridtable th {
+			border: 0px; 
+			border-left: 1px solid #e8e8e8;
+			border-bottom: 1px solid #e8e8e8;
+			background: #fcfcfc;
+			font-size: 14px;
+			line-height: 30px;
+		}
+		
+		.gridtable td {
+			border: 0px; 
+			border-left: 1px solid #e8e8e8;
+			border-bottom: 1px solid #e8e8e8;
+			word-break: break-all; 
+			word-wrap: break-word;
+			font-size: 14px;
+			line-height: 30px;
+		}
+		
+		
+		.order_gb .content h4{ margin-top: -10px; margin-bottom: 12px; font-size: 14px; color: #333;}
+		.order_gb .content .z_title{ margin-bottom: 14px; color: #000; font-size: 16px;}
+		.order_gb .content .zd_zn{ margin-bottom: 25px;}
+		.order_gb .content .zd_zn li{ margin-bottom: 10px; margin-left: 15px; list-style: disc; font-size: 14px; color: #333;}
+		.order_gb .content .normal_pro .t_title{ margin-top: 15px; margin-bottom: 10px; font-weight: 700; font-size: 18px; color: #000;}
+		.order_gb .content .normal_pro p{ margin-left: 14px; margin-bottom: 8px; font-size: 14px; color: #333;}
+		
+		.h_totalwidth{
+			width:auto; 
+			padding:20px;
+		}
+	</style>
+	</head>
+	
+	<body>
+		<div class="order_gb">
+		<h2 class="title">客户名称2016年04月账单</h2>
+			<div class="content">
+			<h3>账户信息</h3>
+			<div class="clearfix">
+                <div class="comp_name">客户名称</div>
+                <div class="order_time">账单日期：2016年04月01日-2016年04月30日</div>
+            </div>
+			<table class="pay_table">
+				<tr>
+					<td class="title">本期应付：</td>
+					<td class="title">最迟付款日：</td>
+				</tr>
+				<tr>
+					<td class="content">￥ 110,120</td>					
+					<td class="content">2016年04月30日</td>
+				</tr>
+			</table>
+			<div class="clearfix">
+                <div class="qgray_d">付款方式</div>
+                <ul class="qgray_l">
+                    <li>收款方： 杭州云毅网络技术服务有限公司</li>
+                    <li>开户银行： 招商银行杭州分行营业部</li>
+                    <li>银行账号： 5719 0915 7210 901</li>
+                </ul>
+            </div>
+			<h3>费用详情</h3>
+			
+            <table class="order_gb_table">
+            	<tbody>
+					<tr>
+						<td>本期技术服务费：</td>															
+						<td>￥110,120 </td> 
+					</tr>
+					<tr>
+						<td>本季度技术服务费：</td>																
+						<td>￥110,120</td> 
+					</tr>
+					<tr>
+						<td>本期调账金额：</td>																
+						<td>￥110,120</td> 
+					</tr>
+					<tr>
+						<td>年度累计技术服务费：</td>																
+						<td>￥110,120</td> 
+					</tr>
+					<tr>
+						<td>年度累计已缴款：</td>																
+						<td>￥ 110,120</td> 
+					</tr>
+					<tr>
+						<td>年度累计调账金额：</td>
+						<td>￥ 110,120</td>
+					</tr>
+					<tr>
+						<td>本期应付：</td>															
+						<td>￥ 110,120</td>
+					</tr>
+				
+				</tbody>
+            </table>
+			
+			<table class="order_gb_table">
+                <tbody>
+                	<tr>
+						<td>本期应付：</td>															
+						<td>￥ ${billAccount.payable?number?string(',##0.00')}</td>
+					</tr>
+					<tr>
+						<td>年保底金额：	</td>														
+						<td>￥ ${totalMinCosume?number?string(',##0.00')}</td> 
+					</tr>
+					<tr>
+						<td>（改为累计）本期应付保底金额：</td>														
+						<td>￥ ${billInfo.advance_amount?string(',##0.00')}</td> 
+					</tr>
+					<tr>
+						<td>年度累计已缴款：</td>														
+						<td>￥ ${billInfo.yearly_total_receive?string(',##0.00')}</td> 
+					</tr>
+				</tbody>
+			</table>
+			<h3>计费详情</h3>
+			<table class="order_gb_table">
+            	<tbody>
+					<tr>
+						<td>年费：</td>																
+						<td>￥110,120</td> 
+					</tr>
+					<tr>
+						<td>基础服务费：</td>																
+						<td>￥110,120</td> 
+					</tr>
+					<tr>
+						<td>保底：</td>															
+						<td>￥110,120/年</td> 
+					</tr>
+					<tr>
+						<td>封顶：</td>																
+						<td>￥110,120/年</td> 
+					</tr>
+					<tr>
+						<td>折扣：</td>																
+						<td>75%</td> 
+					</tr>
+					
+					
+				</tbody>
+            </table>
+			<div class='pageNext'></div>
+			
+			
+			
+			<h3>产品1：期货资管云</h3>
+			<h3>费用详情</h3>
+			<table class="order_gb_table">
+            	<tbody>
+					<tr>
+						<td>本期技术服务费：</td>															
+						<td>￥110,120 </td> 
+					</tr>
+					<tr>
+						<td>本季度技术服务费：</td>																
+						<td>￥110,120</td> 
+					</tr>
+					<tr>
+						<td>本期调账金额：</td>																
+						<td>￥110,120</td> 
+					</tr>
+					<tr>
+						<td>年度累计技术服务费：</td>																
+						<td>￥110,120</td> 
+					</tr>
+					<tr>
+						<td>年度累计已缴款：</td>																
+						<td>￥ 110,120</td> 
+					</tr>
+					<tr>
+						<td>年度累计调账金额：</td>
+						<td>￥ 110,120</td>
+					</tr>
+				</tbody>
+            </table>
+			<h3>套餐及计费信息</h3>
+				<table class="order_gb_table">
+					<thead>
+						<tr>
+							<th width="10%">计费模式</th>
+							<th width="8%">计费规格/阶梯区间</th>
+							<th width="10%">费率(‰)</th>
+							<th width="12%">年费</th>
+							<th width="12%">基础服务费</th>
+							<th width="12%">保底</th>
+							<th width="12%">封顶</th>
+							<th width="8%">折扣（%）</th>
+							
+						</tr>
+					</thead>
+					<tbody>
+					
+						<tr>
+							<td align="center">期货资管云</td>
+							<td align="center">N≤5</td>
+							<td align="center">0.60‰</td>
+							<td align="center">￥5,300,000.00</td>
+							<td align="center">￥300,000.00</td>
+							<td align="center">￥300,000.00/年</td>
+							<td align="center">￥5,300,000.00/年</td>
+							<td align="center">75%</td>	
+							
+						</tr>
+					</tbody>
+				</table>
+				
+			
+			<h3>客户交易明细</h3>			
+							<table class="order_gb_table">
+									<thead>
+										<tr>
+										<th>序号</th>
+										<th>日期</th>
+										<th>日资产规模</th>
+										<th>年费率（‰）</th>
+										<th>日技术服务费</th>
+										</tr>
+									</thead>
+									<tbody>
+									
+										<tr>
+											<td align="center">1</td>
+											<td align="center">2016/4/1</td>
+											<td align="center">*******</td>
+											<td align="center">0.75‰</td>
+											<td align="center">*******</td>
+											
+										</tr>
+									
+										<tr>
+											<td align="center">合计</td>
+											<td></td>
+											<td></td>
+											<td></td> 
+											<td align="center">*******</td>					 
+										</tr>
+									</tbody>
+								</table>
+			<div class='pageNext'></div>
+			<h3>产品2：期货资管云</h3>
+			<h3>费用详情</h3>
+			<table class="order_gb_table">
+            	<tbody>
+					<tr>
+						<td>本期技术服务费：</td>															
+						<td>￥110,120 </td> 
+					</tr>
+					<tr>
+						<td>本季度技术服务费：</td>																
+						<td>￥110,120</td> 
+					</tr>
+					<tr>
+						<td>本期调账金额：</td>																
+						<td>￥110,120</td> 
+					</tr>
+					<tr>
+						<td>年度累计技术服务费：</td>																
+						<td>￥110,120</td> 
+					</tr>
+					<tr>
+						<td>年度累计已缴款：</td>																
+						<td>￥ 110,120</td> 
+					</tr>
+					<tr>
+						<td>年度累计调账金额：</td>
+						<td>￥ 110,120</td>
+					</tr>
+					
+				</tbody>
+            </table>
+			<h3>套餐及计费信息</h3>
+				<table class="order_gb_table">
+					<thead>
+						<tr>
+							<th width="10%">计费模式</th>
+							<th width="8%">计费规格/阶梯区间</th>
+							<th width="10%">费率(‰)</th>
+							<th width="12%">年费</th>
+							<th width="12%">基础服务费</th>
+							<th width="12%">保底</th>
+							<th width="12%">封顶</th>
+							<th width="8%">折扣（%）</th>
+							
+						</tr>
+					</thead>
+					<tbody>
+					
+						<tr>
+							<td align="center">期货资管云</td>
+							<td align="center">N≤5</td>
+							<td align="center">0.60‰</td>
+							<td align="center">￥4,200,000.00</td>
+							<td align="center">￥1,200,000.00</td>
+							<td align="center">￥1,200,000.00/年</td>
+							<td align="center">￥4,200,000.00/年</td>
+							<td align="center">80%</td>	
+							
+						</tr>
+					</tbody>
+				</table>
+				
+			
+			<h3>客户交易明细</h3>			
+				
+								<table class="order_gb_table">
+									<thead>
+										<tr>
+										<th>序号</th>
+										<th>日期</th>
+										<th>日资产规模</th>
+										<th>年费率（‰）</th>
+										<th>日技术服务费</th>
+										</tr>
+									</thead>
+									<tbody>
+									
+										<tr>
+											<td align="center">1</td>
+											<td align="center">2016/4/15</td>
+											<td align="center">*******</td>
+											<td align="center">0.60‰</td>
+											<td align="center">*******</td>
+											
+										</tr>
+									
+										<tr>
+											<td align="center">合计</td>
+											<td></td>
+											<td></td>
+											<td></td> 
+											<td align="center">*******</td>					 
+										</tr>
+									</tbody>
+								</table>
+							
+							<br />
+							<br />
+							<hr />
+							
+			<div class="z_title">--账单服务指南--</div>
+            <ul class="zd_zn">
+                <li>资管云服务平台7*24小时客户服务热线：0571-26695555（转1）</li>
+                <li>您收到账单后，请按照合同约定付费日期在限定日期范围内付费。付费后请妥善保管付费凭证，以备核查。</li>
+                <li>为保证账单每月能及时准确地寄送给您，请在电子账单地址变更时，及时致电客户服务热线，或通过客户服务邮箱提前办理地址变更。</li>
+                <li>联系地址：杭州市滨江区江南大道3588号恒生大厦新大楼6楼 邮编：310053</li>
+            </ul>
+			
+			</div>
+		</div>
+	</body>
+</html>
+

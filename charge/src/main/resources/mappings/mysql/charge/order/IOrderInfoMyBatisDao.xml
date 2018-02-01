@@ -1,0 +1,716 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hundsun.boss.modules.charge.dao.order.OrderInfoMyBatisDao">
+	<!-- 查看订单产品拆分信息 -->
+	<select id="queryOrderIncomeSetting"
+		parameterType="com.hundsun.boss.modules.charge.form.order.OrderIncomeSettingForm"
+		resultType="com.hundsun.boss.modules.charge.form.order.OrderIncomeSettingForm">
+		SELECT 
+		  ois.id,
+		  ois.contract_id,
+		  ois.payment_type,
+		  ROUND(ois.split_ratio,2) AS split_ratio,
+		  DATE_FORMAT(
+		    ois.income_begin_date,
+		    '%Y-%m-%d'
+		  ) AS income_begin_date,
+		  DATE_FORMAT(ois.income_end_date, '%Y-%m-%d') AS income_end_date,
+		  ois.product_id,
+		  op.productname AS product_name,
+		  ois.split_amount
+		FROM
+		  order_income_setting ois  
+		  LEFT JOIN v_prdsale_jf op 
+		    ON op.prdid = ois.ex_product_id 
+		<where>
+			1=1
+			<if test="contract_id != null and contract_id !=''">
+				and ois.contract_id=#{contract_id}
+			</if>
+		</where>
+		ORDER BY ois.income_begin_date,ois.payment_type,ois.product_id
+	</select> 
+	<!-- 修改订单产品拆分数据 -->
+	<insert id="updateOrderIncomeSetting" parameterType="com.hundsun.boss.modules.charge.form.order.OrderIncomeSettingForm">
+		update order_income_setting 
+		<set>
+			<if test="split_ratio != null and split_ratio != ''">
+				split_ratio = #{split_ratio},
+			</if>
+			<if test="split_ratio == null or split_ratio == ''">
+				split_ratio = null,
+			</if>
+			<if test="split_amount != null and split_amount != ''">
+				split_amount = #{split_amount},
+			</if>
+			<if test="split_amount == null or split_amount == ''">
+				split_amount = null,
+			</if>
+			<if test="income_begin_date != null and income_begin_date != ''">
+				income_begin_date = DATE_FORMAT(#{income_begin_date}, '%Y-%m-%d'),
+			</if>
+			<if test="income_begin_date == null or income_begin_date == ''">
+				income_begin_date = null,
+			</if>
+			<if test="income_end_date != null and income_end_date != ''">
+				income_end_date = DATE_FORMAT(#{income_end_date}, '%Y-%m-%d'),
+			</if>
+			<if test="income_end_date == null or income_end_date == ''">
+				income_end_date = null,
+			</if>
+		</set>
+		<where> 
+			id = #{id}
+		</where>
+	</insert>
+	<!-- 修改订单收入状态信息 -->
+	<update id="updateOrderStatus"
+		parameterType="com.hundsun.boss.modules.charge.form.order.OrderInfoForm">
+		update order_info
+		<set>
+			<if test="order_status != null or order_status !=''">
+				order_status = #{order_status},
+			</if>
+		</set>
+		<where>
+			<if test="contract_id != null and contract_id !=''">
+				contract_id = #{contract_id}
+			</if>
+		</where>
+	</update>
+	
+	<!-- 调设置订单收入的存储过程 -->
+	<select id="setOrderIncome" parameterType="com.hundsun.boss.modules.charge.form.order.OrderIncomeSettingForm" >
+		CALL sp_order_set_split_retio(#{contract_id})
+	</select>
+	
+	<!-- 查看收入设置信息 -->
+	<select id="queryIncomeSettingList"
+		parameterType="com.hundsun.boss.modules.charge.form.order.OrderInfoForm"
+		resultType="java.util.Map">
+		SELECT 
+		  oi.office_id,
+		  oi.contract_id,
+		  DATE_FORMAT(ois.income_begin_date,'%Y-%m-%d') AS income_begin_date,
+		  DATE_FORMAT(ois.income_end_date,'%Y-%m-%d') AS income_end_date,
+		  CASE
+		    ois.payment_type 
+		    WHEN '12471' 
+		    THEN '一次性费用' 
+		    WHEN '12473' 
+		    THEN '年费' 
+		    WHEN '12472' 
+		    THEN '不定期' 
+		    WHEN '12474' 
+		    THEN '条件延后' 
+		    WHEN '12475' 
+		    THEN '技术服务费' 
+		    ELSE NULL 
+		  END AS payment_type,
+		  ois.ex_product_id,
+		  ois.product_id,
+		  vpj.productname AS product_name,
+		  ois.split_ratio AS split_ratio,
+		  ois.split_amount 
+		FROM
+		  order_income_setting ois 
+		  LEFT JOIN v_prdsale_jf vpj 
+		    ON vpj.prdid = ois.ex_product_id,
+		  order_info oi 
+		  LEFT JOIN v_customer_jf vf
+			ON oi.customer_id=vf.customerid
+		WHERE oi.contract_id = ois.contract_id 
+			and ois.del_flag != '1'
+			and oi.del_flag = '0'
+		<if test="contract_id !=null and contract_id !='' ">
+			  and oi.contract_id like concat('%', #{contract_id}, '%')
+		</if>
+		<if test="customer_id != null and customer_id !=''">
+			  and oi.customer_id like concat('%', #{customer_id}, '%')
+		</if> 
+		<if test="hs_customername != null and hs_customername !=''">
+			  and vf.chinesename like concat('%', #{hs_customername}, '%')
+		</if> 
+		<if test="customermanagername != null and customermanagername !=''">
+			  and vf.customermanagername like concat('%', #{customermanagername}, '%')
+		</if>
+		<if test="expire_month != null and expire_month !=''">
+			  <![CDATA[and DATE_FORMAT(order_end_date, '%Y%m%d') >= DATE_FORMAT(NOW(), '%Y%m%d')
+  			  and fun_get_month_diff(order_end_date,NOW())<=CONVERT(#{expire_month}, SIGNED)]]>
+		</if>
+		<if test="order_status != null and order_status !=''">
+			  and oi.order_status in (${order_status}) 
+		</if>
+		<if test="payment_type !=null and payment_type !='' ">
+			  and ois.payment_type in (${payment_type}) 
+		</if>
+		<if test="income_source !=null and income_source !='' ">
+			  and oi.income_source in (${income_source}) 
+		</if>
+		<if test="office_id != null and office_id != '' ">
+		  AND oi.office_id in (${office_id}) 
+		</if>
+		ORDER BY oi.office_id, oi.contract_id, ois.income_begin_date, ois.income_end_date,ois.payment_type, ois.ex_product_id
+	</select> 
+	<!-- 查看合同信息 -->
+	<select id="queryContractList"
+		parameterType="com.hundsun.boss.modules.charge.form.order.OrderInfoForm"
+		resultType="java.util.Map">
+		SELECT DISTINCT
+		  oi.office_id,
+		  oi.contract_id,
+		  oi.customer_id,
+		  vf.chinesename,
+		  oi.order_begin_date,
+		  oi.order_end_date,
+		  oi.order_status,
+		  oi.office_id,
+		  vf.customermanagername,
+		  vcj.customername realcustomername,
+		  oi.income_source
+		FROM
+		  order_info oi 
+		  LEFT JOIN v_contract_jf vcj
+			ON oi.contract_id=vcj.contractid
+		  LEFT JOIN v_customer_jf vf
+			ON oi.customer_id=vf.customerid
+		  LEFT JOIN order_adv_payment rt
+		    ON oi.contract_id = rt.contract_id
+		    and rt.del_flag != '1'
+		WHERE 1 = 1 
+			and oi.del_flag = '0'
+		<if test="contract_id !=null and contract_id !='' ">
+			  and oi.contract_id like concat('%', #{contract_id}, '%')
+		</if>
+		<if test="customer_id != null and customer_id !=''">
+			  and oi.customer_id like concat('%', #{customer_id}, '%')
+		</if> 
+		<if test="hs_customername != null and hs_customername !=''">
+			  and vf.chinesename like concat('%', #{hs_customername}, '%')
+		</if> 
+		<if test="customermanagername != null and customermanagername !=''">
+			  and vf.customermanagername like concat('%', #{customermanagername}, '%')
+		</if>
+		<if test="expire_month != null and expire_month !=''">
+			  <![CDATA[and DATE_FORMAT(order_end_date, '%Y%m%d') >= DATE_FORMAT(NOW(), '%Y%m%d')
+  			  and fun_get_month_diff(order_end_date,NOW())<=CONVERT(#{expire_month}, SIGNED)]]>
+		</if>
+		<if test="order_begin_date != null and order_begin_date !=''">
+			  <![CDATA[and DATE_FORMAT(order_end_date, '%Y%m%d') >= #{order_begin_date} ]]>
+		</if>
+		<if test="order_end_date != null and order_end_date !=''">
+			  <![CDATA[and DATE_FORMAT(order_begin_date, '%Y%m%d') <= #{order_end_date} ]]>
+		</if>
+		<if test="order_status != null and order_status !=''">
+			  and oi.order_status in (${order_status}) 
+		</if>
+		<if test="payment_type !=null and payment_type !='' ">
+			  and rt.payment_type in (${payment_type}) 
+		</if>
+		<if test="income_source !=null and income_source !='' ">
+			  and oi.income_source in (${income_source}) 
+		</if>
+		<if test="office_id != null and office_id != '' ">
+		      and oi.office_id in (${office_id}) 
+		</if>
+		ORDER BY oi.office_id, oi.contract_id
+	</select> 
+	<!-- 查看产品信息 -->
+	<select id="queryProdList"
+		parameterType="string"
+		resultType="java.util.Map">
+		SELECT 
+		  rt.id,
+		  rt.contract_id,
+		  rt.combine_id,
+		  rt.product_id,
+		  rt.prod_begin_date,
+		  rt.prod_end_date,
+		  rl.fee_type,
+		  date_sub(rt.prod_end_date, interval -1 day) as end_date
+		FROM
+		  order_product rt 
+		  LEFT JOIN order_model rl 
+		    ON rl.ref_id = rt.id 
+		    AND rl.belong_type = '3' 
+		    AND rl.del_flag = '0' 
+		WHERE 1 = 1 
+			and rt.del_flag = '0'
+			and rt.contract_id = #{_parameter}
+			and rt.prod_begin_date is not null
+			and rt.prod_begin_date != ''
+			and rt.prod_end_date is not null
+			and rt.prod_end_date != ''
+			and rl.feemodel_name != '' 
+  			and rl.feemodel_name is not null
+		ORDER BY rt.prod_begin_date
+	</select> 
+	<!-- 查看组合信息 -->
+	<select id="queryCombineList"
+		parameterType="string"
+		resultType="java.util.Map">
+		SELECT 
+		  id,
+		  contract_id,
+		  combine_begin_date,
+		  DATE_FORMAT(
+		    DATE_SUB(
+		      combine_begin_date,
+		      INTERVAL 1 DAY
+		    ),
+		    '%Y-%m-%d'
+		  ) AS end_date,
+		  combine_end_date,
+		  DATE_FORMAT(
+		    DATE_SUB(combine_end_date, INTERVAL - 1 DAY),
+		    '%Y-%m-%d'
+		  ) AS begin_date 
+		FROM
+		  order_combine 
+		WHERE 1 = 1 
+		  AND del_flag = '0'  
+		    AND contract_id = #{_parameter}
+		  GROUP BY contract_id, combine_begin_date
+		  ORDER BY combine_begin_date
+	</select> 
+	
+	
+	<!-- 查询合同到期提醒信息 -->
+	<select id="queryOrderWarningList" resultType="java.util.Map">
+		<![CDATA[
+			SELECT 
+			  oi.contract_id,
+			  vm.email,
+			  oi.order_end_date,
+			  oi.customer_id,
+			  vrf.chinesename AS customer_name 
+			FROM
+			  order_info oi 
+			  LEFT JOIN v_customer_jf vrf 
+			    ON vrf.customerid = oi.customer_id 
+			  LEFT JOIN v_manager_jf vm 
+			    ON vm.customermanagerno = vrf.customermanagerno 
+			WHERE DATE_FORMAT(oi.order_end_date, '%Y%m%d') >= DATE_FORMAT(NOW(), '%Y%m%d') 
+			  AND fun_get_date_diff (oi.order_end_date, NOW()) IN ('30', '90')
+			  AND oi.cc_flag = '1'
+		  ]]>
+	</select> 
+	
+	
+	<!-- 云毅合同到期提醒信息 -->
+	<select id="queryOrderWarningListOnYunYi" resultType="java.util.Map">
+		<![CDATA[
+			SELECT 
+			  oi.contract_id,
+			  vrf.customermanagername AS manager_name,
+			  DATE_FORMAT(oi.order_begin_date, '%Y年%m月%d日') order_begin_date,
+			  DATE_FORMAT(oi.order_end_date, '%Y年%m月%d日') order_end_date,
+			  oi.customer_id,
+			  vrf.chinesename AS customer_name 
+			FROM
+			  order_info oi 
+			  LEFT JOIN v_customer_jf vrf 
+			    ON vrf.customerid = oi.customer_id 
+			WHERE DATE_FORMAT(oi.order_end_date, '%Y%m%d') >= DATE_FORMAT(NOW(), '%Y%m%d') 
+			  AND fun_get_date_diff (oi.order_end_date, NOW()) = '62'
+			  AND oi.cc_flag = '1'
+			  AND oi.office_id = '9774'
+		  ]]>
+	</select> 
+	
+	
+	<!-- 查询某个合同产品满足计费填报标识是未上报/上报类型是上线日的条数 -->
+	<select id="queryProductCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT 
+		  COUNT(1) 
+		FROM
+		  v_contract_jf vcj 
+		  LEFT JOIN v_contract_detail_jf vcdj 
+		    ON vcdj.`con_id` = vcj.`con_id` 
+		  LEFT JOIN v_prdsale_jf vpj 
+		    ON vpj.`prdid` = vcdj.`salprd_id` 
+		WHERE vcj.`contractid` = #{contractid}
+		  AND vcj.`customerid` = #{customerid} 
+		  AND vpj.`productid` = #{productid}
+		  AND vcdj.`accountidentity` = #{accountidentity}
+		  AND vcj.reporttype_id = #{reporttype_id}
+	</select> 
+	
+	<!-- 查询产品上线列表信息 -->
+	<select id="queryProductLineList"
+		parameterType="com.hundsun.boss.modules.charge.form.order.ProductLineInfoForm"
+		resultType="java.util.Map">
+		SELECT 
+		  pli.*,
+		  sd.label,
+		  vcj.chinesename
+		FROM
+		  product_line_info pli 
+		  LEFT JOIN v_customer_jf vcj 
+		    ON vcj.customerid = pli.customer_id 
+		  LEFT JOIN sys_dict sd
+    		ON sd.value = pli.online_status
+    	  INNER JOIN order_info oi 
+		    ON pli.contract_id = oi.contract_id 
+		    where 1=1
+		    AND sd.type='show_status'
+		<if test="contract_id !=null and contract_id !='' ">
+			  and pli.contract_id like concat('%', #{contract_id}, '%')
+		</if>
+		<if test="customer_id != null and customer_id !=''">
+			  and pli.customer_id like concat('%', #{customer_id}, '%')
+		</if> 
+		<if test="hs_customername != null and hs_customername !=''">
+			  and vcj.chinesename like concat('%', #{hs_customername}, '%')
+		</if> 
+		<if test="product_id != null and product_id !=''">
+			  and pli.product_id like concat('%', #{product_id}, '%')
+		</if> 
+		<if test="online_status != null and online_status !=''">
+			  and pli.online_status = #{online_status}
+		</if>
+		<if test="dept !=null and dept !='' ">   
+        	and oi.office_id in (${dept}) 
+        </if>
+		ORDER BY pli.contract_id desc
+	</select>
+	
+	<select id="queryOrderRelationList"
+		parameterType="java.util.Map"
+		resultType="java.util.Map">
+		select
+			a.id,
+			a.contract_id,
+			a.relation_name,
+			a.mobile_tel,
+			a.relation_tel,
+			a.email,
+			a.cc,
+			a.bcc,
+			a.duties
+		from order_relation a
+		<where>
+			a.contract_id = #{contract_id}
+		</where>
+	</select>
+	
+	<select id="getSalers" parameterType="com.hundsun.boss.modules.charge.form.bill.DownloadForm" resultType="java.util.Map">
+		SELECT 
+		  sro.bill_id,
+		  vrf.customermanagername 
+		FROM
+		  charge_bill_info elo,
+		  ss_order_info sro 
+		  LEFT JOIN v_customer_jf vrf 
+		    ON vrf.customerid = sro.customer_id 
+		WHERE elo.bill_id = sro.bill_id 
+		  AND elo.belong_type = '1' 
+		  AND sro.del_flag = '0'
+		  AND sro.office_id = #{office_id} 
+		<if test="charge_begin_month != null and charge_begin_month != ''">  
+		  <![CDATA[AND DATE_FORMAT(elo.charge_begin_date, '%Y%m') >= #{charge_begin_month}]]>
+		</if>
+		<if test="charge_end_month != null and charge_end_month != ''">  
+		  <![CDATA[AND DATE_FORMAT(elo.charge_end_date, '%Y%m') <= #{charge_end_month}]]>
+		</if>
+	</select> 
+	
+	<delete id="deleteProductLine" parameterType="com.hundsun.boss.modules.charge.entity.order.ProductLineInfo">
+        DELETE 
+		FROM
+		  product_line_info 
+		WHERE contract_id = #{contract_id} 
+		  AND customer_id = #{customer_id} 
+		  AND product_id = #{product_id} 
+		  AND product_line_date = #{product_line_date} 
+    </delete>
+    
+    <!-- 新增产品线记录-->
+	<insert id="insertProductLine"
+		parameterType="com.hundsun.boss.modules.charge.entity.order.ProductLineInfo">
+		insert into product_line_info
+		<trim prefix="(" suffix=")" suffixOverrides=",">  
+			<if test="true">id,</if>
+			<if test="contract_id != null and contract_id != ''">contract_id,</if>
+			<if test="customer_id != null and customer_id != ''">customer_id,</if>
+			<if test="product_id != null and product_id != ''">product_id,</if>
+			<if test="product_line_date != null and product_line_date != ''">product_line_date,</if>
+			<if test="online_status != null and online_status != ''">online_status,</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="true">#{id},</if>
+			<if test="contract_id != null and contract_id != ''">#{contract_id},</if>
+			<if test="customer_id != null and customer_id != ''">#{customer_id},</if>
+			<if test="product_id != null and product_id != ''">#{product_id},</if>
+			<if test="product_line_date != null and product_line_date != ''">#{product_line_date},</if>
+			<if test="online_status != null and online_status != ''">#{online_status},</if>
+		</trim>
+	</insert>
+	
+	<!-- 计费专用 -->
+	<select id="chargeContractList"
+		parameterType="com.hundsun.boss.modules.charge.form.order.OrderInfoForm"
+		resultType="java.util.Map">
+		SELECT 
+		  oi.office_id,
+		  oi.contract_id,
+		  oi.customer_id,
+		  vf.chinesename,
+		  oi.order_begin_date,
+		  oi.order_end_date,
+		  oi.order_status,
+		  oi.office_id,
+		  vf.customermanagername
+		FROM
+		  order_info oi 
+		  LEFT JOIN v_customer_jf vf
+			ON oi.customer_id=vf.customerid
+		WHERE 1 = 1 
+			and oi.del_flag = '0'
+		<if test="contract_id !=null and contract_id !='' ">
+			  and oi.contract_id like concat('%', #{contract_id}, '%')
+		</if>
+		<if test="customer_id != null and customer_id !=''">
+			  and oi.customer_id like concat('%', #{customer_id}, '%')
+		</if> 
+		<if test="hs_customername != null and hs_customername !=''">
+			  and vf.chinesename like concat('%', #{hs_customername}, '%')
+		</if> 
+		<if test="customermanagername != null and customermanagername !=''">
+			  and vf.customermanagername like concat('%', #{customermanagername}, '%')
+		</if>
+		<if test="expire_month != null and expire_month !=''">
+			  <![CDATA[and DATE_FORMAT(order_end_date, '%Y%m%d') >= DATE_FORMAT(NOW(), '%Y%m%d')
+  			  and fun_get_month_diff(order_end_date,NOW())<=CONVERT(#{expire_month}, SIGNED)]]>
+		</if>
+		<if test="order_begin_date != null and order_begin_date !=''">
+			  <![CDATA[and DATE_FORMAT(order_end_date, '%Y%m%d') >= #{order_begin_date} ]]>
+		</if>
+		<if test="order_end_date != null and order_end_date !=''">
+			  <![CDATA[and DATE_FORMAT(order_begin_date, '%Y%m%d') <= #{order_end_date} ]]>
+		</if>
+		<if test="income_status != null and income_status !=''">
+			  and oi.income_status = #{income_status}
+		</if>
+		<if test="office_id != null and office_id != '' ">
+		      and oi.office_id in (${office_id}) 
+		</if>
+		ORDER BY oi.office_id, oi.contract_id
+	</select> 
+	
+	<!-- 查询审核合同列表 -->
+	<select id="queryAuditOrderInfoList"
+		parameterType="com.hundsun.boss.modules.charge.form.audit.OrderAuditSearchForm"
+		resultType="java.util.Map">
+		SELECT
+		  oi.office_id,
+		  oi.contract_id,
+		  oi.customer_id,
+		  vf.chinesename,
+		  audit.process_status,
+		  audit.contract_process_key,
+		  audit.id as audit_id,
+		  audit.process_instance_id as audit_process_id
+		FROM
+		  order_info oi 
+		  LEFT JOIN v_customer_jf vf
+			ON oi.customer_id=vf.customerid
+		  RIGHT JOIN wf_contract_audit audit
+			ON oi.wf_process_key = audit.contract_process_key
+		WHERE 1 = 1 
+			and oi.del_flag = '0'
+		<if test="contract_id !=null and contract_id !='' ">
+			  and oi.contract_id like concat('%', #{contract_id}, '%')
+		</if>
+		<if test="customer_id != null and customer_id !=''">
+			  and oi.customer_id like concat('%', #{customer_id}, '%')
+		</if> 
+		<if test="customer_name != null and customer_name !=''">
+			  and vf.chinesename like concat('%', #{customer_name}, '%')
+		</if> 
+		<if test="process_status != null and process_status !=''">
+			  and audit.process_status like concat('%', #{process_status}, '%')
+		</if> 
+		<if test="office_id != null and office_id != '' ">
+		      and oi.office_id in (${office_id}) 
+		</if>
+		<if test="dept != null and dept != '' ">
+	   		  AND oi.office_id in (${dept}) 
+		</if>
+		ORDER BY oi.office_id, oi.contract_id
+	</select> 
+	<!-- 查询当年度的保底累计 -->
+	<select id="queryOrderMinCharge"
+		parameterType="java.util.Map"
+		resultType="double">
+		<![CDATA[
+		SELECT 
+		  SUM(IFNULL(rl.min_consume,0)) min_charge
+		FROM
+		  order_combine re,
+		  order_model rl
+		WHERE rl.belong_type = '2'
+		  AND rl.ref_id = re.id
+		  AND rl.del_flag = '0'
+		  AND re.contract_id = #{contract_id}
+		  AND re.del_flag = '0' 
+		  AND DATE_FORMAT(re.combine_begin_date, '%Y%m') <= #{now_month}
+		  AND DATE_FORMAT(re.combine_end_date, '%Y%m') >= #{now_month}
+		]]>
+	</select> 
+	<!-- 根据协同合同编号获取收入设置中的固定费用类型内容 -->
+	<select id="queryFixedIncomeSettingList"
+		parameterType="string"
+		resultType="com.hundsun.boss.modules.forecast.bean.IncomeForecastDataBean">
+		<![CDATA[
+		SELECT
+		  ro.office_id ,
+		  ois.contract_id ,
+		  ois.product_id ,
+		  ois.payment_type ,
+		  CASE
+		    WHEN ois.split_amount IS NOT NULL 
+		    AND ois.split_amount != '0' 
+		    THEN ois.split_amount 
+		    ELSE re.amount * ois.split_ratio / 100 
+		  END income,
+		  0 service_charge_weight,
+		  '' charge_begin_date,
+		  '' charge_end_date,
+		  ois.income_begin_date,
+		  ois.income_end_date,
+		  '1' forecast_flag
+		FROM
+		  (SELECT 
+		    op.contract_id,
+		    op.combine_id,
+		    rt.prod_begin_date,
+		    rt.prod_end_date,
+		    op.payment_type,
+		    rt.product_name,
+		    rt.product_id,
+		    rt.ex_product_id,
+		    SUM(amount) amount,
+		    rt.id 
+		  FROM
+		    order_adv_payment op 
+		    LEFT JOIN 
+		      (SELECT 
+		        t.contract_id,
+		        t.combine_id,
+		        t.product_name,
+		        t.product_id,
+		        t.ex_product_id,
+		        t.prod_begin_date,
+		        t.prod_end_date,
+		        t.id 
+		      FROM
+		        order_product t 
+		      WHERE t.del_flag = '0' 
+		      GROUP BY t.contract_id,
+		        t.combine_id,
+		        t.product_id) rt 
+		      ON rt.contract_id = op.contract_id 
+		      AND rt.combine_id = op.combine_id 
+		  WHERE op.payment_type IN ('12471', '12472', '12473', '12474') 
+		    AND op.del_flag = '0' 
+		  GROUP BY op.contract_id,
+		    op.combine_id,
+		    op.payment_type,
+		    rt.product_id) re,
+		  order_income_setting ois,
+		  order_info ro 
+		WHERE ois.contract_id = re.contract_id 
+		  AND ois.payment_type = re.payment_type 
+		  AND ois.product_id = re.product_id 
+		  AND DATE_FORMAT(ois.income_end_date, '%Y-%m-%d') >= re.prod_begin_date 
+		  AND DATE_FORMAT(
+		    ois.income_begin_date,
+		    '%Y-%m-%d'
+		  ) <= re.prod_end_date
+		  AND ro.contract_id = re.contract_id
+		  AND re.contract_id = #{_parameter}
+		  ]]>
+	</select> 
+	<!-- 查询审核合同列表 -->
+	<select id="queryMinMaxConsumeList"
+		parameterType="com.hundsun.boss.modules.forecast.bean.IncomeForecastDataBean"
+		resultType="com.hundsun.boss.modules.forecast.bean.MinMaxConsumeDataBean">
+		SELECT 
+		  rt.contract_id,
+		  rt.combine_id,
+		  rt.product_id,
+		  DATE_FORMAT(rt.prod_begin_date, '%Y-%m-%d') prod_begin_date,
+		  DATE_FORMAT(rt.prod_end_date, '%Y-%m-%d') prod_end_date,
+		  ol.min_type,
+		  ol.min_consume,
+		  ol.max_type,
+		  ol.max_consume,
+		  IFNULL(ois.split_ratio, 0) split_ratio
+		FROM
+		  order_model ol,
+		  order_product rt,
+		  order_income_setting ois  
+		WHERE ol.del_flag = '0'
+		  and rt.del_flag = '0' 
+		  and ois.del_flag = '0'
+		  and ol.belong_type = '2' 
+		  and rt.combine_id = ol.ref_id 
+		  and ois.contract_id = rt.contract_id 
+  		  and ois.product_id = rt.product_id 
+  		  and ois.payment_type = '12475' 
+		<if test="contract_id !=null and contract_id !='' ">
+			  and rt.contract_id = #{contract_id}
+		</if>
+		<if test="product_id != null and product_id !=''">
+			  and rt.product_id = #{product_id}
+		</if> 
+		<if test="charge_begin_date != null and charge_begin_date !=''">
+			  <![CDATA[and DATE_FORMAT(rt.prod_begin_date, '%Y-%m-%d') <= #{charge_begin_date} ]]>
+		</if>
+		<if test="charge_end_date != null and charge_end_date !=''">
+			  <![CDATA[and DATE_FORMAT(rt.prod_end_date, '%Y-%m-%d') >= #{charge_end_date} ]]>
+		</if>
+		GROUP BY rt.contract_id,
+		  rt.combine_id,
+		  rt.product_id
+	</select> 
+	<!-- 查询一条表中的数据(下载模板使用) -->
+	<select id="queryImportContractData"
+		resultType="com.hundsun.boss.modules.charge.entity.order.ImportContracts">
+		SELECT 
+		  contract_id,
+		  office_id,
+		  order_begin_date,
+		  order_end_date,
+		  min_cousume,
+		  product_id,
+		  payment_amount,
+		  advance_date
+		FROM
+		  order_import_list 
+		WHERE contract_id = '示例合同'
+	</select>
+	<!-- 根据合同号删除数据库中对应的数据 -->
+	<delete id="deleteImportContractsData" parameterType="com.hundsun.boss.modules.charge.entity.order.ImportContracts">
+		delete from order_import_list where contract_id = #{contract_id}
+	</delete>
+	<!-- 续签合同数据导入 -->
+	<insert id="insertImportContractsData" parameterType="java.util.List">
+		INSERT INTO order_import_list (
+		  contract_id,
+		  order_begin_date,
+		  order_end_date,
+		  customer_name 
+		)
+		VALUES
+		<foreach collection="list" item="item" index="index" separator=",">
+			(
+			#{item.contract_id},
+			#{item.order_begin_date},
+			#{item.order_end_date},
+			#{item.customer_name}
+			)
+		</foreach>
+	</insert>
+</mapper>

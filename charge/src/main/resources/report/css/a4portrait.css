@@ -1,0 +1,54 @@
+@page {
+	size: portrait;
+	width: 21cm;
+	height: 29.7cm;
+	@bottom-center{
+		content:	""	counter(page)	" /"	counter(pages);
+	}
+
+	@top-center {
+		content: element(header)
+	}
+}
+body {
+	font-family: "Microsoft YaHei" ! important;
+}
+
+div.header {
+	display: block;
+	text-align: center;
+	position: running(header);
+}
+
+div.footer {
+	display: block;
+	text-align: center;
+	position: running(footer);
+}
+
+@media print {
+	table {
+		page-break-after: auto;
+		-fs-table-paginate: paginate;
+	}
+	tr {
+		page-break-inside: avoid;
+		page-break-after: auto
+	}
+	td {
+		page-break-inside: avoid;
+		page-break-after: auto
+	}
+	thead {
+		display: table-header-group
+	}
+	tfoot {
+		display: table-footer-group
+	}
+	tbody {
+    	display:table-row-group;
+	}
+	thead {
+		display:table-header-group;
+	}
+}

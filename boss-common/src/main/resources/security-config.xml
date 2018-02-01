@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<files>
+	<args bits="128" onoff="on"/>
+	<file path="boss.properties">
+		<field name="jdbc.url" />
+		<field name="jdbc.username" />
+		<field name="jdbc.password" />
+		<field name="jdbc.driverClass" />
+	</file>
+</files>

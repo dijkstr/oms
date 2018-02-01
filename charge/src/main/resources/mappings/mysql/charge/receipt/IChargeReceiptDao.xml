@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hundsun.boss.modules.charge.dao.receipt.ChargeReceiptDao">
+
+	<insert id="save"
+		parameterType="com.hundsun.boss.modules.charge.entity.receipt.ChargeReceipt">
+		INSERT INTO charge_bankreceipt (
+		  bankreceipt_serialno,
+		  department,
+		  contract_id,
+		  ex_product_id,
+		  product_name,
+		  bankreceipt_amount,
+		  bankreceipt_month,
+		  receiveid,
+		  bankreceipt_date
+		) 
+		VALUES
+		  (#{bankreceipt_serialno},#{department},#{contract_id},#{ex_product_id},
+		  #{product_name},#{bankreceipt_amount},#{bankreceipt_month},#{receiveid},#{bankreceipt_date}) 
+	</insert>
+
+	<select id="get" parameterType="java.lang.String"
+		resultType="com.hundsun.boss.modules.charge.entity.receipt.ChargeReceipt">
+		SELECT 
+		  bankreceipt_serialno,
+		  department,
+		  contract_id,
+		  ex_product_id,
+		  product_name,
+		  bankreceipt_amount,
+		  bankreceipt_month,
+		  receiveid,
+		  bankreceipt_date
+		   FROM charge_bankreceipt WHERE receiveid=#{_parameter}
+	</select>
+	
+	<update id="update"
+	parameterType="com.hundsun.boss.modules.charge.entity.receipt.ChargeReceipt">
+	UPDATE  charge_bankreceipt SET 
+		  bankreceipt_serialno=#{bankreceipt_serialno},
+		  department=#{department},
+		  contract_id=#{contract_id},
+		  ex_product_id=#{ex_product_id},
+		  product_name=#{product_name},
+		  bankreceipt_amount=#{bankreceipt_amount},
+		  bankreceipt_month=#{bankreceipt_month},
+		  bankreceipt_date=#{bankreceipt_date}
+	WHERE receiveid=#{receiveid}
+	</update>
+	
+	<select id="queryChargeReceiptList" 
+	    parameterType="com.hundsun.boss.modules.charge.form.receipt.ChargeReceiptForm"
+		resultType="com.hundsun.boss.modules.charge.form.receipt.ChargeReceiptForm">
+		SELECT 
+		  cbt.bankreceipt_serialno,
+		  cbt.department,
+		  cbt.contract_id,
+		  cbt.ex_product_id,
+		  cbt.product_name,
+		  cbt.bankreceipt_amount,
+		  cbt.bankreceipt_month,
+		  cbt.receiveid,
+		  cbt.bankreceipt_date,
+		  vcf.customerid,
+		  vcf.customername AS custname,
+		  vpf.productid AS saleprdid,
+		  vcf.evaluatbranch AS audit_branch_name,
+		  vcf.evaluatname AS audit_employee_name
+		   FROM charge_bankreceipt cbt
+		   LEFT JOIN v_contract_jf vcf
+		   ON cbt.contract_id=vcf.contractid
+		   LEFT JOIN v_prdsale_jf vpf
+		   ON cbt.ex_product_id=vpf.prdid		   
+		   WHERE 1=1
+		   <include refid="charge_receipt_criteria" />
+		   ORDER BY bankreceipt_month desc
+	</select>
+	
+	<sql id="charge_receipt_criteria">
+	<if test="department != null and department != '' ">
+	   AND cbt.department in (${department}) 
+	</if>
+	<if test="contract_id != null and contract_id != '' ">
+	   AND cbt.contract_id like CONCAT('%', #{contract_id},'%')
+	</if>
+	
+	<if test="bankreceipt_month_begin != null and bankreceipt_month_begin != '' ">
+	   AND  DATE_FORMAT(cbt.bankreceipt_month, '%Y-%m-%d') >= #{bankreceipt_month_begin}
+	</if>
+	<if test="bankreceipt_month_end != null and bankreceipt_month_end != '' ">
+	<![CDATA[ AND DATE_FORMAT(cbt.bankreceipt_month, '%Y-%m-%d') <= #{bankreceipt_month_end} ]]>
+	</if>
+	<if test="customerid != null and customerid != '' ">
+	   AND vcf.customerid like CONCAT('%', #{customerid},'%')
+	</if>
+	<if test="custname != null and custname != '' ">
+	   AND vcf.customername like CONCAT('%', #{custname},'%')
+	</if>
+	<if test="saleprdid != null and saleprdid != '' ">
+	   AND vpf.productid like CONCAT('%', #{saleprdid},'%')
+	</if>
+	<if test="bankreceipt_amount != null and bankreceipt_amount != '' ">
+	   AND cbt.bankreceipt_amount=#{bankreceipt_amount}
+	</if>
+	<if test="audit_branch_name != null and audit_branch_name != '' ">
+	   AND vcf.evaluatbranch like CONCAT('%', #{audit_branch_name},'%')
+	</if>
+	<if test="audit_employee_name != null and audit_employee_name != '' ">
+	   AND  vcf.evaluatname like CONCAT('%', #{audit_employee_name},'%')
+	</if>
+	
+	</sql>
+	
+	<select id="exportChargeReceipt" 
+	    parameterType="com.hundsun.boss.modules.charge.form.receipt.ChargeReceiptForm"
+		resultType="java.util.Map">
+		SELECT 
+		  SUBSTR(cbt.bankreceipt_month,1,10) AS bankreceipt_month,
+		  sff.name AS order_source,
+		  cbt.contract_id  AS hs_contract_id,
+		   vcf.customerid AS hs_user_id,
+		   vcf.customername AS user_name,
+		  vpf.productid AS saleprdid,
+		  cbt.product_name AS saleprdname,
+		    vcf.evaluatbranch AS audit_branch_name,
+		   vcf.evaluatname AS audit_employee_name,
+		   cbt.bankreceipt_amount,
+		   SUBSTR(cbt.bankreceipt_date,1,10) AS create_datetime
+		   
+		   FROM charge_bankreceipt cbt
+		   LEFT JOIN v_contract_jf vcf
+		   ON cbt.contract_id=vcf.contractid
+		   LEFT JOIN v_prdsale_jf vpf
+		   ON cbt.ex_product_id=vpf.prdid	
+		   LEFT JOIN sys_office sff
+		   ON cbt.department=sff.code   
+		   WHERE 1=1
+		   <include refid="charge_receipt_criteria" />
+		   ORDER BY bankreceipt_month desc
+	</select>
+	
+	<select id="getReceiptByContractId" 
+	    parameterType="string"
+		resultType="string">
+		SELECT 
+		  IFNULL(SUM(cbt.bankreceipt_amount), 0) AS total_bankreceipt
+		FROM
+		  charge_bankreceipt cbt 
+		WHERE cbt.contract_id = #{contract_id}
+	</select>
+</mapper>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<columns>
+	<column header="所属部门" type="string" field="department"/>
+	<column header="批次号" type="string" field="batch_no" />
+	<column header="协同合同号" type="string" field="contract_id" />
+	<column header="发生日期" type="string" field="oc_date" />
+	<column header="协同客户号" type="string" field="customer_id" />
+	<column header="客户名称" type="string" field="customer_name" />
+	<column header="协同产品编号" type="string" field="product_id" />
+	<column header="产品名称" type="string" field="product_name" />
+	<column header="计费类型" type="string" field="fee_type_name" />
+	<column header="业务数据1" type="number" field="data1" format="#,##0.########"/>
+	<column header="业务数据2" type="number" field="data2" format="#,##0.########"/>
+	<column header="业务数据3" type="number" field="data3" format="#,##0.########"/>
+	<column header="业务数据4" type="number" field="data4" format="#,##0.########"/>
+	<column header="业务数据5" type="number" field="data5" format="#,##0.########"/>
+</columns>

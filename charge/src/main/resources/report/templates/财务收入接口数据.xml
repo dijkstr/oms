@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<columns>
+	<column header="批次号" type="string" field="batch_no"/>
+	<column header="唯一索引" type="string" field="detailid"/>
+	<column header="所属部门" type="string" field="order_source"/>
+	<column header="协同合同编号" type="string" field="contract_id" />
+	<column header="协同产品编号" type="string" field="hs_product_id" />
+	<column header="协同销售产品编号" type="string" field="product_sale_id" />
+	<column header="产品名称" type="string" field="productname" />
+	<column header="计费开始时间" type="string" field="charge_begin_time" />
+	<column header="计费结束时间" type="string" field="charge_end_time" />
+	<column header="费用类型" type="string" field="payment_type" />
+	<column header="财务累计收入" type="number" field="total_finance_income" format="#,##0.########"/>
+	<column header="推送状态" type="string" field="update_flag"/>
+</columns>

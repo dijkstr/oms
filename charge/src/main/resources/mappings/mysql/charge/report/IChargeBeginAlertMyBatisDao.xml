@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper
+	namespace="com.hundsun.boss.modules.charge.dao.report.ChargeBeginAlertMyBatisDao">
+	<!-- 获取二维表格式的中间表数据 -->
+	<select id="list"
+		parameterType="com.hundsun.boss.modules.charge.form.common.SearchForm"
+		resultType="com.hundsun.boss.modules.charge.entity.report.ChargeBeginAlert">
+			<![CDATA[
+			SELECT 
+			  ro.office_id,
+			  ro.contract_id,
+			  ro.order_begin_date,
+			  ro.create_date,
+			  DATE_FORMAT(CONCAT(ro.charge_begin_date, '01'), '%Y-%m') charge_begin_date ,
+			  eyte.payable,
+			  eyte.income,
+			  eyte.change_income,
+			  eyte.change_service_charge,
+			  ro.customer_name 
+			FROM
+			  (SELECT 
+			    office_id,
+			    contract_id,
+			    order_begin_date,
+			    create_date,
+			    CASE
+			      WHEN DATE_FORMAT(order_begin_date, '%Y%m') <= DATE_FORMAT(create_date, '%Y%m') 
+			      THEN DATE_FORMAT(create_date, '%Y%m') 
+			      ELSE DATE_FORMAT(order_begin_date, '%Y%m') 
+			    END charge_begin_date,
+			    vrf.chinesename AS customer_name 
+			  FROM
+			    order_info oi
+			    LEFT JOIN v_customer_jf vrf 
+			      ON vrf.customerid = oi.customer_id 
+			  WHERE 1 = 1
+			    AND
+			    (
+			      (
+			        DATE_FORMAT(create_date, '%Y%m') >= #{charge_begin_month, jdbcType=VARCHAR}
+			        AND DATE_FORMAT(create_date, '%Y%m') <= #{charge_end_month, jdbcType=VARCHAR}
+			      ) 
+			      OR (
+			        DATE_FORMAT(order_begin_date, '%Y%m') >= #{charge_begin_month, jdbcType=VARCHAR}
+			        AND DATE_FORMAT(order_begin_date, '%Y%m') <= #{charge_end_month, jdbcType=VARCHAR}
+			      )
+			    )
+			    AND order_begin_date IS NOT NULL 
+			    AND order_begin_date != '' 
+			    AND DATE_FORMAT(order_begin_date, '%Y%m') <= DATE_FORMAT(NOW(), '%Y%m')
+			]]>
+			<if test="contract_id != null and contract_id !=''">
+			   AND contract_id = #{contract_id}
+			</if>
+			<if test="hs_customername != null and hs_customername !=''">
+			   AND vrf.chinesename like CONCAT('%', #{hs_customername},'%')
+			</if>
+			<if test="office_id != null and office_id !=''">
+			   AND office_id = #{office_id}
+			</if>
+			<if test="dept != null and dept != '' ">
+		       AND office_id in (${dept}) 
+			</if>
+			  ) ro 
+			  LEFT JOIN charge_monthly_contract_income eyte 
+			    ON eyte.contract_id = ro.contract_id 
+			    AND eyte.charge_month = ro.charge_begin_date
+			 ORDER BY office_id,
+				contract_id,
+				charge_begin_date DESC
+	</select>
+</mapper>

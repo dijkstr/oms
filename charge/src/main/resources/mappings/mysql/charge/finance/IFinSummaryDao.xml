@@ -1,0 +1,437 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hundsun.boss.modules.charge.dao.finance.FinSummaryDao">
+	
+	<!--获取财务汇总表列表信息.-->
+	<select id="queryFinSummaryList"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm"
+		resultType="java.util.Map">
+		SELECT 
+		  ro.office_id,
+		  etp.contract_id,
+		  ro.customer_id,
+		  vrf.chinesename as user_name,
+		  vcj.customername,
+		  etp.charge_month,
+		  IFNULL(etp.income, 0) income,
+		  IFNULL(etp.change_income, 0) change_income,
+		  IFNULL(etp.service_charge, 0) service_charge,
+		  IFNULL(etp.change_service_charge, 0) change_service_charge,
+		  IFNULL(etp.receiveable, 0) receiveable ,
+		  IFNULL(etp.payable, 0) payable,
+		  ro.income_source
+		FROM
+		  charge_monthly_contract_income etp
+		  	LEFT JOIN v_contract_jf vcj ON vcj.contractid = etp.contract_id
+			LEFT JOIN order_info ro ON etp.contract_id = ro.contract_id
+			LEFT JOIN v_customer_jf vrf ON ro.customer_id = vrf.customerid
+		<where> 1=1
+			<if test = "charge_month != null and charge_month != ''" > 
+			  	<![CDATA[ and etp.charge_month = #{charge_month} ]]>
+		    </if> 
+		    <if test="contract_id != null and contract_id != ''"> 
+				and etp.contract_id = #{contract_id}  
+		    </if>
+			<if test="customer_id != null and customer_id != ''"> 
+				and ro.customer_id = #{customer_id}  
+			</if>
+			<if test="user_name != null and user_name != ''"> 
+				and vrf.chinesename LIKE CONCAT('%', #{user_name},'%')
+			</if>
+			<if test="office_id !=null and office_id !='' ">   
+          		and ro.office_id = #{office_id}
+        	</if>
+	        <if test="dept !=null and dept !='' ">   
+	        	and ro.office_id in (${dept}) 
+	        </if>
+	        <if test="income_source !=null and income_source !='' ">   
+	        	and ro.income_source in (${income_source}) 
+	        </if>
+	    </where>
+	</select>
+	
+	<!--获取财务汇总表明细.-->
+	<select id="getFinSummaryDetailList"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm"
+		resultType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm">
+		<include refid="getDetailList"/>
+	</select>
+	<select id="exportDetailList"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm"
+		resultType="java.util.Map">
+		<include refid="getDetailList"/>
+	</select>
+	
+	<!--财务汇总表明细.-->
+   	<sql id="getDetailList">
+	  SELECT 
+	    V.office_id,
+	    V.con_id,
+	    V.contract_id,
+		ro.customer_id,
+		vrf.chinesename as user_name,
+		vcj.customername,
+		V.product_id,
+		V.product_name,
+	    V.charge_begin_date,
+	    V.charge_end_date,
+	    V.payment_type,
+	    CASE
+			WHEN payment_type = '12471' 
+		    THEN '一次性费用' 
+		    WHEN payment_type = '12472' 
+		    THEN '不定期' 
+		    WHEN payment_type = '12473' 
+		    THEN '年费' 
+		    WHEN payment_type = '12474' 
+		    THEN '条件延后' 
+		    WHEN payment_type = '12475' 
+		    THEN '技术服务费' 
+		    ELSE '' 
+		END as display_name,
+	    V.income as finance_current_income,
+	    V.income_begin_date,
+	    V.income_end_date,
+	    V.detailid,
+	    V.change_income,
+	    ro.income_source
+	  FROM
+		charge_detail_temp V
+		LEFT JOIN order_info ro ON V.contract_id = ro.contract_id
+	    LEFT JOIN v_customer_jf vrf ON ro.customer_id = vrf.customerid
+	    LEFT JOIN v_contract_jf vcj ON vcj.contractid = V.contract_id
+	 WHERE 1=1
+	    <if test="contract_id != null and contract_id != ''"> 
+		and V.contract_id = #{contract_id}  
+		</if> 
+		<if test="office_id != null and office_id != '' ">
+		and V.office_id in (${office_id}) 
+		</if>
+		<if test="income_source != null and income_source != '' ">
+		and ro.income_source in (${income_source}) 
+		</if>
+		order by V.charge_end_date desc, V.payment_type desc
+	</sql>
+	<select id="insertIncomeInterface" parameterType="java.util.Map">
+   		CALL sp_finance_income_interface(#{contract_id}, #{batch_no}, #{dept});
+   	</select>
+	<select id="exportLastDetail"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm"
+		resultType="java.util.Map">
+		SELECT 
+		  V.detailid,
+		  V.contract_id,
+		  ro.customer_id,
+		  vrf.chinesename AS user_name,
+		  vcj.customername,
+		  V.product_id,
+		  V.product_name,
+		  V.payment_type,
+		  CASE
+		    WHEN V.payment_type = '12471' 
+		    THEN '一次性费用' 
+		    WHEN V.payment_type = '12472' 
+		    THEN '不定期' 
+		    WHEN V.payment_type = '12473' 
+		    THEN '年费' 
+		    WHEN V.payment_type = '12474' 
+		    THEN '条件延后' 
+		    WHEN V.payment_type = '12475' 
+		    THEN '技术服务费' 
+		    ELSE '' 
+		  END display_name,
+		  DATE_FORMAT((V.charge_begin_date), '%Y-%m-%d') AS charge_begin_date,
+		  DATE_FORMAT((V.charge_end_date), '%Y-%m-%d') AS charge_end_date,
+		  IFNULL((V.income), 0) AS finance_current_income,
+		  IFNULL(V.change_income, 0) AS change_income,
+		  ro.income_source 
+		FROM
+		  (SELECT 
+		    detail.* 
+		  FROM
+		    charge_detail_temp detail,
+		    (SELECT 
+		      MAX(charge_end_date) charge_end_date,
+		      contract_id,
+		      product_id,
+		      payment_type,
+		      income_end_date,
+		      combine_id 
+		    FROM
+		      charge_detail_temp 
+		    WHERE 1 = 1
+		    <if test = "charge_month != null and charge_month != ''" > 
+				<![CDATA[ and DATE_FORMAT(charge_end_date, '%Y%m') <= #{charge_month} ]]>
+			</if> 
+		    GROUP BY contract_id,
+		      product_id,
+		      payment_type,
+		      income_begin_date,
+		      combine_id) U 
+		  WHERE U.contract_id = detail.contract_id 
+		    and U.product_id = detail.product_id 
+		    and U.combine_id = detail.combine_id 
+		    and U.charge_end_date = detail.charge_end_date 
+		    and U.income_end_date = detail.income_end_date 
+		    and U.payment_type = detail.payment_type) V 
+		  LEFT JOIN order_info ro 
+		    ON ro.contract_id = V.contract_id 
+		  LEFT JOIN v_customer_jf vrf 
+		    ON ro.customer_id = vrf.customerid 
+		  LEFT JOIN v_contract_jf vcj 
+		    ON vcj.contractid = V.contract_id 
+		WHERE 1 = 1
+			<if test="office_id != null and office_id != '' ">
+		  		and ro.office_id in (${office_id}) 
+			</if>
+			<if test="income_source != null and income_source != '' ">
+		  		and ro.income_source in (${income_source}) 
+			</if>
+		ORDER BY V.contract_id DESC,
+		  V.payment_type DESC,
+		  V.charge_end_date DESC 
+	</select>
+	<!-- 财务收入接口数据查询list -->
+	<select id="queryFinanceIncomeList" parameterType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm"
+		resultType="java.util.Map">
+		select 
+		  cfi.batch_no,
+		  cfi.office_id,
+		  cfi.con_id,
+		  cfi.contract_id,
+		  vpj.productid as product_id,
+		  DATE_FORMAT(cfi.charge_begin_date, '%Y-%m-%d') charge_begin_date,
+		  DATE_FORMAT(cfi.charge_end_date, '%Y-%m-%d') charge_end_date,
+		  cfi.payment_type,
+		  cfi.total_finance_income,
+		  cfi.detailid,
+		  vpj.productname,
+		  cfi.update_flag,
+		  cfi.change_income
+		<include refid="financeIncomeCondition"></include>
+		ORDER BY cfi.batch_no DESC,cfi.charge_end_date DESC
+	</select>
+	<!-- 统一接口业务数据查询条件 -->
+	<sql id="financeIncomeCondition">
+		FROM
+		  charge_income_interface cfi
+		  LEFT JOIN v_prdsale_jf vpj
+		  ON cfi.ex_product_id = vpj.prdid
+		WHERE 1=1
+		<if test="charge_month != null and charge_month != ''">  
+		  <![CDATA[and DATE_FORMAT(cfi.charge_begin_date, '%Y%m') <= #{charge_month}
+		  	and DATE_FORMAT(cfi.charge_end_date, '%Y%m') >= #{charge_month}]]>
+		</if>
+		<if test="contract_id != null and contract_id != ''">  
+		  	and cfi.contract_id LIKE CONCAT('%', #{contract_id},'%')
+		</if>
+        <if test="product_id !=null and product_id !='' ">
+			and vpj.productid LIKE CONCAT('%', #{product_id},'%')
+        </if>
+        <if test="product_name !=null and product_name !='' ">
+			and vpj.productname LIKE CONCAT('%', #{product_name},'%')
+        </if>
+        <if test="payment_type !=null and payment_type !='' ">
+			and cfi.payment_type  = #{payment_type}
+        </if>
+        <if test="update_flag !=null and update_flag !='' ">
+			and cfi.update_flag  = #{update_flag}
+        </if>
+        <if test="office_id != null and office_id != '' ">
+		  	and cfi.office_id in (${office_id}) 
+		</if>
+	</sql>
+	
+	<!-- 产品级明细 -->
+	<select id="exportProductDetail"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm"
+		resultType="java.util.Map">
+		SELECT 
+		  ro.office_id,
+		  vtf.dept_name,
+		  vrf.chinesename,
+		  ro.customer_id,
+		  vcj.customername,
+		  ete.contract_id,
+		  ete.charge_month,
+		  IFNULL(ete.income,0) AS income,
+		  IFNULL(ete.change_income,0) AS change_income,
+		  IFNULL(ete.service_charge,0) AS service_charge,
+		  IFNULL(ete.change_service_charge,0) AS change_service_charge,
+		  ete.product_id,
+		  vef.productname,
+		  ro.income_source
+		FROM 
+		  charge_monthly_product_income ete
+		  LEFT JOIN order_info ro 
+			ON ete.contract_id = ro.contract_id 
+	      LEFT JOIN v_customer_jf vrf 
+			ON ro.customer_id = vrf.customerid 
+		  LEFT JOIN v_prdsale_jf vef
+			ON ete.product_id = vef.productid 
+	      LEFT JOIN v_department_jf vtf 
+			ON ro.office_id = vtf.hs_dept_id 
+		  LEFT JOIN v_contract_jf vcj
+    		ON vcj.contractid = ete.contract_id
+		WHERE 1=1
+		<if test="charge_month != null and charge_month != ''">  
+		  <![CDATA[and ete.charge_month <= #{charge_month}]]>
+		</if>
+		<if test="contract_id != null and contract_id != ''">  
+		  	and ete.contract_id LIKE CONCAT('%', #{contract_id},'%')
+		</if>
+		<if test="office_id != null and office_id != '' ">
+		  and ro.office_id in (${office_id}) 
+		</if>
+		<if test="income_source != null and income_source != '' ">
+		  and ro.income_source in (${income_source}) 
+		</if>
+		ORDER BY ro.office_id, ete.contract_id, ete.charge_month
+	</select>
+	
+	<!-- 合同级明细 -->
+	<select id="exportContractDetail"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm"
+		resultType="java.util.Map">
+		SELECT 
+		  ro.office_id,
+		  vtf.dept_name,
+		  vrf.chinesename,
+		  ro.customer_id,
+		  vcj.customername,
+		  ete.contract_id,
+		  ete.charge_month,
+		  IFNULL(ete.income,0) AS income,
+		  IFNULL(ete.change_income,0) AS change_income,
+		  IFNULL(ete.service_charge,0) AS service_charge,
+		  IFNULL(ete.change_service_charge,0) AS change_service_charge,
+		  IFNULL(ete.receiveable,0) AS receiveable,
+		  IFNULL(ete.payable,0) AS payable,
+		  ro.income_source
+		FROM 
+		  charge_monthly_contract_income ete
+		  LEFT JOIN order_info ro 
+			ON ete.contract_id = ro.contract_id 
+	      LEFT JOIN v_customer_jf vrf 
+			ON ro.customer_id = vrf.customerid 
+	      LEFT JOIN v_department_jf vtf 
+			ON ro.office_id = vtf.hs_dept_id
+		  LEFT JOIN v_contract_jf vcj
+            ON vcj.contractid = ete.contract_id 
+		WHERE 1=1
+		<if test="charge_month != null and charge_month != ''">  
+		  <![CDATA[and ete.charge_month <= #{charge_month}]]>
+		</if>
+		<if test="contract_id != null and contract_id != ''">  
+		  	and ete.contract_id LIKE CONCAT('%', #{contract_id},'%')
+		</if>
+		<if test="office_id != null and office_id != '' ">
+		  and ro.office_id in (${office_id}) 
+		</if>
+		<if test="income_source != null and income_source != '' ">
+		  and ro.income_source in (${income_source}) 
+		</if>
+		ORDER BY ro.office_id, ete.contract_id, ete.charge_month
+	</select>
+	
+	<!-- 公司级明细 -->
+	<select id="exportBUDetail"
+		parameterType="com.hundsun.boss.modules.charge.form.finance.FinSummaryForm"
+		resultType="java.util.Map">
+		SELECT 
+		  ro.office_id,
+		  vtf.dept_name,
+		  ete.charge_month,
+		  SUM(IFNULL(ete.income,0)) AS income,
+		  SUM(IFNULL(ete.change_income,0)) AS change_income,
+		  SUM(IFNULL(ete.service_charge,0)) AS service_charge,
+		  SUM(IFNULL(ete.change_service_charge,0)) AS change_service_charge,
+		  SUM(IFNULL(ete.receiveable,0)) AS receiveable,
+		  SUM(IFNULL(ete.payable,0)) AS payable
+		FROM 
+		  charge_monthly_contract_income ete
+		  LEFT JOIN order_info ro 
+			ON ete.contract_id = ro.contract_id 
+	      LEFT JOIN v_department_jf vtf 
+			ON ro.office_id = vtf.hs_dept_id 
+		WHERE 1=1
+		<if test="charge_month != null and charge_month != ''">  
+		  <![CDATA[and ete.charge_month <= #{charge_month}]]>
+		</if>
+		<if test="office_id != null and office_id != '' ">
+		  and ro.office_id in (${office_id}) 
+		</if>
+		GROUP BY ro.office_id,ete.charge_month 
+		ORDER BY ro.office_id, ete.charge_month
+	</select>
+	
+	<select id="getFinsummaryForForecast" parameterType="string" resultType="com.hundsun.boss.modules.forecast.bean.IncomeForecastDataBean">
+		<![CDATA[
+		SELECT
+		  elp.office_id,
+		  elp.contract_id,
+		  elp.product_id,
+		  elp.payment_type,
+		  elp.income,
+		  elp.change_income,
+		  0 service_charge_weight,
+		  elp.charge_begin_date,
+		  elp.charge_end_date,
+		  elp.income_begin_date,
+		  elp.income_end_date,
+		  '0' forecast_flag
+		FROM
+		  charge_detail_temp elp 
+		WHERE elp.contract_id = #{_parameter} 
+		  and elp.payment_type = '12475' 
+		UNION
+		ALL 
+		SELECT 
+		  U.* 
+		FROM
+		  (SELECT
+		    elp.office_id,
+		    elp.contract_id,
+		    elp.product_id,
+		    elp.payment_type,
+		    elp.income,
+		    0 AS change_income,
+		    IFNULL(SUM(elp.change_income), 0) / fun_get_date_diff (
+		      MAX(elp.charge_end_date),
+		      MIN(elp.charge_begin_date)
+		    ) service_charge_weight,
+		    DATE_FORMAT(
+		      DATE_ADD(
+		        MAX(elp.charge_end_date),
+		        INTERVAL 1 MONTH
+		      ),
+		      '%Y-%m-01'
+		    ) charge_begin_date,
+		    elp.income_end_date charge_end_date,
+		    ois.income_begin_date,
+		    ois.income_end_date,
+		    '1' forecast_flag
+		  FROM
+		    charge_detail_temp elp ,
+		    (SELECT 
+		      * 
+		    FROM
+		      order_income_setting 
+		    WHERE contract_id = #{_parameter} 
+		      and payment_type = '12475' 
+		    GROUP BY contract_id,
+		      product_id,
+		      income_begin_date) ois 
+		  WHERE elp.contract_id = #{_parameter} 
+		    and elp.payment_type = '12475' 
+		    and ois.contract_id = elp.contract_id 
+		    and ois.product_id = elp.product_id 
+		    and ois.payment_type = elp.payment_type 
+		  GROUP BY elp.contract_id,
+		    elp.product_id,
+		    ois.income_begin_date) U 
+		WHERE U.charge_begin_date < U.income_end_date
+		]]>
+	</select>
+	
+</mapper>

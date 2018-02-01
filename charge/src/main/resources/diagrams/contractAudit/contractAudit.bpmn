@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:activiti="http://activiti.org/bpmn" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" typeLanguage="http://www.w3.org/2001/XMLSchema" expressionLanguage="http://www.w3.org/1999/XPath" targetNamespace="http://www.activiti.org/test">
+  <process id="contractAudit" name="合同审核流程" isExecutable="true">
+    <startEvent id="auditStart" name="合同审核开始" activiti:initiator="auditUserId"></startEvent>
+    <userTask id="auditUserTask" name="审核人员审核合同" activiti:assignee="${auditUserId}" activiti:candidateGroups="charge:audit:orderInfoAudit:verify"></userTask>
+    <exclusiveGateway id="exclusivegateway2" name="Exclusive Gateway"></exclusiveGateway>
+    <sequenceFlow id="flow2" sourceRef="auditUserTask" targetRef="exclusivegateway2"></sequenceFlow>
+    <serviceTask id="contractPassServiceTask" name="设置合同的状态为审核通过，状态：40" activiti:expression="#{contractServiceTask.verifyPass(execution)}"></serviceTask>
+    <serviceTask id="contractFailServiceTask" name="设置合同的状态为审核不通过，状态：29" activiti:expression="#{contractServiceTask.verifyFail(execution)}"></serviceTask>
+    <endEvent id="auditEnd" name="End"></endEvent>
+    <sequenceFlow id="auditPassFlow" name="审核通过" sourceRef="exclusivegateway2" targetRef="contractPassServiceTask">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${isAuditPass}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="auditFailFlow" name="审核不通过" sourceRef="exclusivegateway2" targetRef="contractFailServiceTask">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!isAuditPass}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="flow1" sourceRef="auditStart" targetRef="auditUserTask"></sequenceFlow>
+    <sequenceFlow id="flow3" sourceRef="contractFailServiceTask" targetRef="auditUserTask"></sequenceFlow>
+    <sequenceFlow id="flow4" sourceRef="contractPassServiceTask" targetRef="auditEnd"></sequenceFlow>
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_contractAudit">
+    <bpmndi:BPMNPlane bpmnElement="contractAudit" id="BPMNPlane_contractAudit">
+      <bpmndi:BPMNShape bpmnElement="auditStart" id="BPMNShape_auditStart">
+        <omgdc:Bounds height="35.0" width="35.0" x="365.0" y="8.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="auditUserTask" id="BPMNShape_auditUserTask">
+        <omgdc:Bounds height="55.0" width="105.0" x="330.0" y="80.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="exclusivegateway2" id="BPMNShape_exclusivegateway2">
+        <omgdc:Bounds height="40.0" width="40.0" x="362.0" y="208.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="contractPassServiceTask" id="BPMNShape_contractPassServiceTask">
+        <omgdc:Bounds height="84.0" width="121.0" x="322.0" y="297.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="contractFailServiceTask" id="BPMNShape_contractFailServiceTask">
+        <omgdc:Bounds height="82.0" width="115.0" x="171.0" y="120.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="auditEnd" id="BPMNShape_auditEnd">
+        <omgdc:Bounds height="35.0" width="35.0" x="365.0" y="448.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="flow2" id="BPMNEdge_flow2">
+        <omgdi:waypoint x="382.0" y="135.0"></omgdi:waypoint>
+        <omgdi:waypoint x="382.0" y="208.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="auditPassFlow" id="BPMNEdge_auditPassFlow">
+        <omgdi:waypoint x="382.0" y="248.0"></omgdi:waypoint>
+        <omgdi:waypoint x="382.0" y="297.0"></omgdi:waypoint>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds height="14.0" width="48.0" x="387.0" y="257.0"></omgdc:Bounds>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="auditFailFlow" id="BPMNEdge_auditFailFlow">
+        <omgdi:waypoint x="362.0" y="228.0"></omgdi:waypoint>
+        <omgdi:waypoint x="229.0" y="228.0"></omgdi:waypoint>
+        <omgdi:waypoint x="228.0" y="202.0"></omgdi:waypoint>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds height="14.0" width="60.0" x="300.0" y="208.0"></omgdc:Bounds>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow1" id="BPMNEdge_flow1">
+        <omgdi:waypoint x="382.0" y="43.0"></omgdi:waypoint>
+        <omgdi:waypoint x="382.0" y="80.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow3" id="BPMNEdge_flow3">
+        <omgdi:waypoint x="228.0" y="120.0"></omgdi:waypoint>
+        <omgdi:waypoint x="228.0" y="107.0"></omgdi:waypoint>
+        <omgdi:waypoint x="330.0" y="107.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="flow4" id="BPMNEdge_flow4">
+        <omgdi:waypoint x="382.0" y="381.0"></omgdi:waypoint>
+        <omgdi:waypoint x="382.0" y="448.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

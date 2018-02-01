@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hundsun.boss.modules.forecast.dao.IncomeForecastMybatisDao">
+
+	<select id="getForecastResult" parameterType="com.hundsun.boss.modules.forecast.form.income.IncomeForecastForm"
+		resultType="com.hundsun.boss.common.utils.echart.CommonChartData">
+		SELECT 
+		  st.label stat_dimension,
+		  DATE_FORMAT(ett.charge_begin_date, '%Y%m') objective_lapse,
+		  SUM(IFNULL(ett.change_income, 0)) stat_result,
+		  'Area' chart_type 
+		FROM
+		  charge_forecast_result ett,
+		  sys_dict st,
+		  order_info ro
+		WHERE st.type = 'payment_type' 
+		  AND st.value = ett.payment_type 
+		  AND ro.contract_id = ett.contract_id
+		  <if test="office_id != null and office_id !=''">
+		  AND ett.office_id = #{office_id}
+		  </if>
+		  <if test="contract_id != null and contract_id !=''">
+		  AND ett.contract_id = #{contract_id}
+		  </if>
+		  <if test="customer_id != null and customer_id !=''">
+		  AND ro.customer_id = #{customer_id}
+		  </if>
+		  <if test="product_id != null and product_id !=''">
+		  AND ett.product_id = #{product_id}
+		  </if>
+		  <if test="begin_month != null and begin_month !=''">
+		  AND DATE_FORMAT(ett.charge_begin_date, '%Y%m') >= #{begin_month}
+		  </if>
+		  <if test="end_month != null and end_month !=''">
+		  <![CDATA[
+		  AND DATE_FORMAT(ett.charge_end_date, '%Y%m') <= #{end_month} 
+		  ]]>
+		  </if>
+		  <if test="dept !=null and dept !='' ">   
+	      AND ro.office_id in (${dept}) 
+	      </if>
+		GROUP BY DATE_FORMAT(ett.charge_begin_date, '%Y-%m'),
+		  ett.payment_type 
+	</select>
+	
+	<delete id="deletePreviousForecastResultsByCondition" parameterType="com.hundsun.boss.modules.forecast.form.income.IncomeForecastForm">
+		DELETE ett.* FROM
+		  charge_forecast_result ett,
+		  order_info ro
+		WHERE ro.contract_id = ett.contract_id
+		  <if test="office_id != null and office_id !=''">
+		  AND ett.office_id = #{office_id}
+		  </if>
+		  <if test="contract_id != null and contract_id !=''">
+		  AND ett.contract_id = #{contract_id}
+		  </if>
+		  <if test="customer_id != null and customer_id !=''">
+		  AND ro.customer_id = #{customer_id}
+		  </if>
+		  <if test="product_id != null and product_id !=''">
+		  AND ett.product_id = #{product_id}
+		  </if>
+		  <if test="begin_month != null and begin_month !=''">
+		  AND DATE_FORMAT(ett.charge_begin_date, '%Y%m') >= #{begin_month}
+		  </if>
+		  <if test="end_month != null and end_month !=''">
+		  <![CDATA[
+		  AND DATE_FORMAT(ett.charge_end_date, '%Y%m') <= #{end_month} 
+		  ]]>
+		  </if>
+		  <if test="dept !=null and dept !='' ">   
+	      AND ro.office_id in (${dept}) 
+	      </if>
+	</delete>
+	
+	<delete id="deletePreviousForecastResultsByContractIds" parameterType="string">
+		DELETE FROM charge_forecast_result WHERE contract_id IN (${_parameter})
+	</delete>
+	
+	<delete id="deletePreviousForecastResultsByContractId" parameterType="string">
+		DELETE FROM charge_forecast_result WHERE contract_id = #{_parameter}
+	</delete>
+	
+	<select id="getRefreshContractIds" parameterType="com.hundsun.boss.modules.forecast.form.income.IncomeForecastForm"
+		resultType="string">
+		SELECT DISTINCT 
+		  ois.contract_id 
+		FROM
+		  order_income_setting ois,
+		  order_info ro 
+		WHERE ro.contract_id = ois.contract_id 
+		  AND ois.del_flag = 0 
+		  AND income_begin_date IS NOT NULL 
+		  AND income_end_date IS NOT NULL 
+		  AND split_ratio IS NOT NULL 
+		  AND split_ratio != 0 
+		  <if test="office_id != null and office_id !=''">
+		  AND ro.office_id = #{office_id}
+		  </if>
+		  <if test="contract_id != null and contract_id !=''">
+		  AND ro.contract_id = #{contract_id}
+		  </if>
+		  <if test="customer_id != null and customer_id !=''">
+		  AND ro.customer_id = #{customer_id}
+		  </if>
+		  <if test="dept !=null and dept !='' ">   
+	      AND ro.office_id in (${dept}) 
+	      </if>
+	</select>
+	
+	<insert id="saveBatchForeCastResult" parameterType="java.util.List">
+          INSERT INTO charge_forecast_result (
+		    id,office_id,contract_id,combine_id,product_id,payment_type,charge_begin_date,
+		    charge_end_date,income_begin_date,income_end_date,income,change_income,forecast_flag
+		  ) 
+        values
+        <foreach collection="list" item="item" index="index" separator=",">
+            (
+            #{item.id}, #{item.office_id}, #{item.contract_id}, #{item.combine_id}, #{item.product_id}, 
+            #{item.payment_type}, #{item.charge_begin_date}, #{item.charge_end_date}, #{item.income_begin_date}, 
+            #{item.income_end_date}, #{item.income}, #{item.change_income}, #{item.forecast_flag}
+            )
+        </foreach>
+    </insert>
+    
+    <select id="getIncomeForecastDetail" parameterType="com.hundsun.boss.modules.forecast.form.income.IncomeForecastForm"
+		resultType="map">
+		SELECT 
+		  ett.*,
+		  vef.productname product_name,
+		  vrf.chinesename customer_name,
+		  st.label payment_type_label,
+		  so.name office_name
+		FROM
+		  charge_forecast_result ett,
+		  sys_dict st,
+		  order_info ro,
+		  v_prdsale_jf vef,
+		  v_customer_jf vrf,
+		  sys_office so
+		WHERE st.type = 'payment_type' 
+		  AND st.value = ett.payment_type 
+		  AND ro.contract_id = ett.contract_id 
+		  AND vef.productid = ett.product_id 
+		  AND vrf.customerid = ro.customer_id
+		  AND so.`code` = ro.`office_id`
+		  <if test="office_id != null and office_id !=''">
+		  AND ett.office_id = #{office_id}
+		  </if>
+		  <if test="contract_id != null and contract_id !=''">
+		  AND ett.contract_id = #{contract_id}
+		  </if>
+		  <if test="customer_id != null and customer_id !=''">
+		  AND ro.customer_id = #{customer_id}
+		  </if>
+		  <if test="product_id != null and product_id !=''">
+		  AND ett.product_id = #{product_id}
+		  </if>
+		  <if test="begin_month != null and begin_month !=''">
+		  AND DATE_FORMAT(ett.charge_begin_date, '%Y%m') >= #{begin_month}
+		  </if>
+		  <if test="end_month != null and end_month !=''">
+		  <![CDATA[
+		  AND DATE_FORMAT(ett.charge_end_date, '%Y%m') <= #{end_month} 
+		  ]]>
+		  </if>
+		  <if test="dept !=null and dept !='' ">   
+	      AND ro.office_id in (${dept}) 
+	      </if>
+	</select>
+</mapper>

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ares>
+	<pub nodeName="charge_wangh" nodeNo="0" />
+	<!-- 插件配置信息 -->
+	<plugins>
+		<plugin service-id="jres.logFactory" load-level="1"></plugin>
+		<plugin service-id="jres.configurationHelper" load-level="1"></plugin>
+		<!-- CEP核心插件 -->
+		<plugin service-id="jres.cepcore" load-level="3">
+			<plugin-configuration>
+				<!-- threadCount : 分发线程池的大小，可不填，默认为3，如果填写非整数，则采用默认值 queueSize : 分发线程池中队列的长度，可不填，默认值为30，如果填写非整数，则采用默认值 
+					debug : cepcore是否开启调试开关，true表示开启，其他表示不开启，非必填项，默认为不开启 -->
+				<args threadCount="3" queueSize="30" debug="false">
+					<monitor port="8015" key="123456" enable="false" />
+				</args>
+				<!-- 本地业务处理插件在CEP中配置处理线程池和服务、优先级等的关系 。 bizservice : 本地业务处理插件 id : 本地业务处理插件的名字，必须与插件的名字一致，必填 
+					debug : 该插件的线程和队列是否开启调试开关，true表示开启，其他不开启，默认为不开启 -->
+				<bizservices>
+					<bizservice id="jres.mockBizService" debug="false">
+						<item serviceId="jres_mock.usermgr.*" functionId="8?" threadCount="2" queueSize="30" />
+						<item serviceId="jres_mock.sysmgr.*" functionId="9?" threadCount="2" queueSize="30" />
+					</bizservice>
+					<bizservice id="jres.mproxy" debug="false" />
+					<bizservice id="jres.xmlServiceModule" debug="true">
+						<item serviceId="*" functionId="*" threadCount="100" queueSize="30" />
+					</bizservice>
+				</bizservices>
+				<routetables>
+					<routetable serviceId="com.hundsun.jres.manage" functionId="8" pluginId="jres.mproxy" />
+					<routetable serviceId="jres_mock.*" functionId="8?;9?" pluginId="jres.mockBizService" />
+					<routetable functionId="4005??*" nodeName="datacenter_wh" />
+					<routetable serviceId="*" functionId="*" pluginId="jres.xmlServiceModule" />
+				</routetables>
+				<eventchains>
+					<chain>jres.mproxy;jres.cepcore</chain>
+					<chain>jres.xmlServiceModule;jres.cepcore</chain>
+					<chain>jres.mockBizService;jres.cepcore</chain>
+					<chain>jres.localService;jres.cepcore</chain>
+					<chain>jres.t2channel;jres.pipeline_itn;jres.cepcore</chain>
+				</eventchains>
+			</plugin-configuration>
+		</plugin>
+
+		<!-- 本地通道插件 -->
+		<plugin service-id="jres.localService" load-level="3">
+			<plugin-configuration>
+				<args debug="false" />
+				<time timeout="600000" />
+			</plugin-configuration>
+		</plugin>
+
+		<!-- 模拟本地业务处理插件 -->
+		<plugin service-id="jres.mockBizService" load-level="3">
+		</plugin>
+
+		<!-- t2通道插件 -->
+		<plugin service-id="jres.t2channel" load-level="3">
+			<plugin-configuration>
+				<!-- T2通道通用配置 address : 多网卡的情况下，选择地址，可不填 port : T2服务器端监听的端口号，必填 sendPoolSize 
+					: 发送线程池大小，取值范围0~ 64，小于0取0，大于0取0，如果取0直接使用其他插件的线程；默认值为2 senderQueueLength : 
+					发送线程池队列容量，即队列的最大大小，在sendPoolSize不为0的情况下有效，默认为30。取值范围0~ 500，小于0取0，大于500取500。 
+					如果为0，则表示T2通道不开启发送线程池，而直接使用外部线程 serverHeartbeatTime : 服务端发起心跳的间隔，单位为秒；默认为15；取值范围5~ 
+					3600，小于5取5，大于3600取3600 clientHeartbeatTime : 服务端发起心跳的间隔，单位为秒；默认为15；取值范围5~ 
+					3600，小于5取5，大于3600取3600 acquireConnWaitTime : 在从连接池获取可用连接，最多等待的时间；默认值为100；取值范围0 
+					~ 5000 registerTime ：服务器端接收客户端TCP连接到T2成功注册的最长时间，超过此时间，该连接会被close掉，单位为秒，取值返回1 
+					~ 15，默认值为5 reconnInterval : 客户端连接在断开之后，多长时间间隔尝试重新建立连接，单位秒，取值范围1 ~ 60，默认值为3 
+					enable : 是否启用，默认为true，只有显示的写明为false（不区分大小写），才不启用 -->
+				<performance debug="false" sendPoolSize="10"
+					senderQueueLength="30" serverHeartbeatTime="15"
+					clientHeartbeatTime="15" acquireConnWaitTime="100" reconnInterval="3" />
+
+				<!-- 服务端配置 enable : 开启T2通道的服务端的开关，true表示开启，false表示不开启，默认为不开启 address 
+					: 多网卡，指定本地IP地址，可不填写 port : 本地服务器监听的端口号，可不填写，默认为8010 safeLevel : 安全级别，值为"none"表示通信无加密，值为“ssl”表示采用SSL协议进行通信，默认为"none" 
+					- ssl : 只在safeLevel为"ssl"的情况下，此项配置才有效。 - keyCertFile : 服务端证书路径，可以是绝对路径，也可以以CLASSPATH的相对路径 
+					- keyCertPwd : 服务端证书密码 - trustCertFile : 所信任证书路径，可以是绝对路径，也可以以CLASSPATH的相对路径 
+					- trustCertPwd : 信任证书密码 licenseDir : 服务端许可所在路径（暂时未被使用） -->
+				<server address="" port="2670" enable="true">
+					<safe safeLevel="none">
+						<ssl keyCertFile="classpath:/server.pfx" keyCertPwd="12345678" 
+						trustCertFile="classpath:/hundsun.pfx" trustCertPwd="12345678" />
+					</safe>
+					<limit licenseDir="classpath:/service/" />
+				</server>
+
+				<!-- 客户端配置 enable : 开启T2通道客户端的开关，true表示开启，false表示不开启，默认为不开启 parentName 
+					: 本节点主动去连接的T2节点名，必须 poolSize : 与parentName组内每个成员建立的通信连接池的大小，可不填，默认为2，取值范围1~ 
+					64，小于1取1，大于64取64 licenseFile : 客户端证书所在路径 encrypt : 许可证书加密算法，只有强制指定为jcc（忽略大小写），才采用jcc的加密算法，否则采用HSBlowfish 
+					算法 safeLevel : 安全级别，值为"none"表示通信无加密，值为“ssl”表示采用SSL协议进行通信，默认为"none" - ssl 
+					: 只在safeLevel为"ssl"的情况下，此项配置才有效。 - keyCertFile : 服务端证书路径，可以是绝对路径，也可以以CLASSPATH的相对路径 
+					- keyCertPwd : 服务端证书密码 - trustCertFile : 所信任证书路径，可以是绝对路径，也可以以CLASSPATH的相对路径 
+					- trustCertPwd : 信任证书密码 members : 组内成员列表 - no : 成员编号 - address : 成员所在IP - 
+					port : 监听端口 -->
+				<client enable="true">
+					<parents>
+
+						<parent parentName="datacenter_wh" poolSize="3">
+							<limit licenseFile="classpath:/client_license.dat" encrypt="HSBlowfish" />
+							<safe safeLevel="none">
+								<ssl keyCertFile="classpath:/client.pfx" keyCertPwd="12345678"
+									trustCertFile="classpath:/hundsun.pfx" trustCertPwd="12345678" />
+							</safe>
+							<members>
+								<member no="0" address="10.20.18.158" port="8900" />
+							</members>
+						</parent>
+					</parents>
+				</client>
+			</plugin-configuration>
+		</plugin>
+
+
+
+		<plugin service-id="jres.filter" load-level="3">
+			<plugin-configuration>
+				<args debug="true" />
+				<handlers>
+					<!-- <instance name="handlerSession" class="com.hsnet.core.jres.HandlerSession"> 
+						<filter eventType="0" functionId="819010;819011;819012;819027;819028" /> 
+						</instance> -->
+					<instance name="handlerSysException" class="com.hundsun.boss.common.jres.HandlerSysException">
+						<filter eventType="1" />
+					</instance>
+				</handlers>
+				<pipeline name="jres.pipeline_itn">
+					handlerSysException
+				</pipeline>
+			</plugin-configuration>
+		</plugin>
+		
+	</plugins>
+</ares>

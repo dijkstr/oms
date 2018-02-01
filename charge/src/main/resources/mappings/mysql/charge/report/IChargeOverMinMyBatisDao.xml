@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper
+	namespace="com.hundsun.boss.modules.charge.dao.report.ChargeOverMinMyBatisDao">
+	<!-- 获取二维表格式的中间表数据 -->
+	<select id="list"
+		parameterType="com.hundsun.boss.modules.charge.form.common.SearchForm"
+		resultType="com.hundsun.boss.modules.charge.entity.report.ChargeOverMin">
+			SELECT 
+			  sro.office_id,
+			  vrf.chinesename customer_name, 
+			  cbi.bill_id,
+			  cbi.contract_id,
+			  GROUP_CONCAT(srt.product_name) product_names,
+			  cbi.charge_begin_date,
+			  cbi.charge_end_date,
+			  srl.min_consume,
+			  cbi.yearly_service_charge 
+			FROM
+			  charge_bill_info cbi 
+			  LEFT JOIN ss_order_model srl 
+			    ON srl.bill_id = cbi.bill_id 
+			    AND srl.ref_id = cbi.combine_id 
+			    AND srl.belong_type = '2' 
+			  LEFT JOIN ss_order_product srt 
+			    ON srt.bill_id = cbi.bill_id 
+			    AND srt.combine_id = cbi.combine_id 
+			    AND srt.del_flag = '0' 
+			  LEFT JOIN ss_order_info sro
+   				ON sro.bill_id = cbi.bill_id
+   			  LEFT JOIN v_customer_jf vrf 
+   			    ON vrf.customerid = sro.customer_id
+			WHERE cbi.belong_type = '2' 
+			<if test="charge_end_month != null and charge_end_month !=''">
+			<![CDATA[ 
+			   AND DATE_FORMAT(cbi.charge_begin_date, '%Y%m') <= #{charge_end_month}
+			]]>
+			</if>
+			<if test="charge_begin_month != null and charge_begin_month !=''">
+			<![CDATA[ 
+			   AND DATE_FORMAT(cbi.charge_begin_date, '%Y%m') >= #{charge_begin_month}
+			]]>
+			</if>
+			<if test="contract_id != null and contract_id !=''">
+			   AND cbi.contract_id = #{contract_id}
+			</if>
+			<if test="office_id != null and office_id !=''">
+			   AND sro.office_id = #{office_id}
+			</if>
+			<if test="dept != null and dept != '' ">
+		       AND sro.office_id in (${dept}) 
+			</if>
+			<![CDATA[ 
+			   AND cbi.bill_id = 
+				  (SELECT 
+				    MIN(bill_id) 
+				  FROM
+				    charge_bill_info o 
+				  WHERE o.contract_id = cbi.contract_id 
+				    and o.combine_id = cbi.combine_id
+				    AND srl.min_consume < o.yearly_service_charge) 
+			]]>
+			GROUP BY cbi.bill_id,
+			  cbi.combine_id
+	</select>
+</mapper>

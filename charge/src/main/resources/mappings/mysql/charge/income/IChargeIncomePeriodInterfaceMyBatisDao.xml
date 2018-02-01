@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hundsun.boss.modules.charge.dao.income.ChargeIncomePeriodInterfaceMyBatisDao">
+
+	<select id="getContdetailForIncomeperiodSync" parameterType="string" resultType="map">
+		SELECT 
+		  vtf.con_id,
+		  vtlf.detailid,
+		  vtf.contractid,
+		  vef.productid,
+		  vtlf.salprd_id,
+		  vtlf.chargetype,
+		  vtlf.servicestartdate,
+		  vtlf.serviceenddate,
+		  vtlf.accountidentity,
+		  FORMAT(vtlf.hasreceive, 2) hasreceive,
+		  vtlf.accountidentity
+		FROM
+		  v_contract_jf vtf,
+		  v_contract_detail_jf vtlf,
+		  v_prdsale_jf vef 
+		WHERE vtlf.con_id = vtf.con_id 
+		  AND vef.prdid = vtlf.salprd_id 
+		  AND vtf.contractid = #{_parameter} 
+		  AND vtf.reporttype_id in ('10572', '10573')
+		  ORDER BY vef.productid,
+		  vtlf.chargetype,
+		  (CASE WHEN vtlf.hasreceive >0 THEN 0 ELSE 1 END),
+		  vtlf.servicestartdate
+	</select>
+	<select id="getLastIncomePeriodForCompare" parameterType="string" resultType="map">
+		SELECT 
+		  * 
+		FROM
+		  charge_income_period_interface 
+		WHERE detailid = #{detailid}
+		  AND send_flag = 'sent' 
+		ORDER BY update_date DESC
+		LIMIT 1
+	</select>
+</mapper>

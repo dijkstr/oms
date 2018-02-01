@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hundsun.boss.modules.charge.dao.income.ChargeIncomeDao">
+
+	<select id="get" parameterType="com.hundsun.boss.modules.charge.form.income.ChargeIncomeForm"
+		resultType="com.hundsun.boss.modules.charge.form.income.ChargeIncome">
+	SELECT
+		detailid,
+		begindate,
+		enddate,
+		incomedate,
+		contractid,
+		productid,
+		chargetype,
+		allincomemny
+	FROM	
+		(
+		SELECT 
+			detailid,
+			income_begin_date as begindate,
+			income_end_date as enddate,
+			DATE_FORMAT(charge_end_date, '%Y-%m') as incomedate,
+			contract_id as contractid,
+			ex_product_id as productid,
+			payment_type as chargetype,
+			total_finance_income as allincomemny
+		FROM
+			charge_income_interface
+		WHERE 1 = 1
+			AND update_flag = '0'
+			<if test="incomemonths != null and incomemonths !=''">
+		 		<![CDATA[ AND DATE_FORMAT(charge_end_date, '%Y-%m') <= #{incomemonths}  ]]>
+		 	</if>
+			AND CONCAT(detailid, '-', charge_end_date, '-', batch_no) IN (
+				SELECT
+					max(CONCAT(detailid, '-', charge_end_date, '-', batch_no))
+				FROM
+					charge_income_interface
+				WHERE 1 = 1
+					AND update_flag = '0'
+					<if test="incomemonths != null and incomemonths !=''">
+			 			<![CDATA[ AND DATE_FORMAT(charge_end_date, '%Y-%m') <= #{incomemonths}  ]]>
+			 		</if>
+				GROUP BY detailid)
+		)t 
+	    LIMIT #{offset}, #{pagesize}
+	</select>
+	<update id="update" parameterType="java.lang.String" >
+	UPDATE 
+	   charge_income_interface 
+	SET update_flag='1' 
+	WHERE (SELECT prop_code FROM tsys_config WHERE prop_name='update_flag')='1'
+	   AND update_flag = '0' 
+	   <if test="_parameter != null and _parameter !=''">
+		   <![CDATA[ AND DATE_FORMAT(charge_end_date, '%Y-%m') <= #{_parameter}  ]]>
+	  </if>
+	</update>
+</mapper>

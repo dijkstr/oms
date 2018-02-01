@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper
+	namespace="com.hundsun.boss.modules.charge.dao.report.ChargeFirstIncomeMyBatisDao">
+	<!-- 获取二维表格式的中间表数据 -->
+	<select id="list"
+		parameterType="com.hundsun.boss.modules.charge.form.common.SearchForm"
+		resultType="com.hundsun.boss.modules.charge.entity.report.ChargeFirstIncome">
+			SELECT 
+			  U.office_id,
+			  U.contract_id contract_id,
+			  DATE_FORMAT(
+			    U.income_begin_date,
+			    '%Y%m%d'
+			  ) income_begin_date,
+			  DATE_FORMAT(
+			    U.income_end_date,
+			    '%Y%m%d'
+			  ) income_end_date,
+			  DATE_FORMAT(
+			    U.charge_begin_date,
+			    '%Y%m%d'
+			  ) charge_begin_date,
+			  SUM(e.change_income) AS change_income
+			FROM
+			  (SELECT 
+			    cii.office_id,
+			    cii.contract_id,
+			    MAX(cii.batch_no) batch_no,
+			    MIN(cii.charge_begin_date) charge_begin_date,
+			    MIN(cii.income_begin_date) income_begin_date,
+			    MAX(cii.income_end_date) income_end_date 
+			  FROM
+			    charge_income_interface cii 
+			 WHERE 1=1
+			<if test="charge_end_month != null and charge_end_month !=''">
+			<![CDATA[ 
+			   AND DATE_FORMAT(cii.charge_begin_date, '%Y%m') <= #{charge_end_month}
+			]]>
+			</if>
+			<if test="charge_begin_month != null and charge_begin_month !=''">
+			<![CDATA[ 
+			   AND DATE_FORMAT(cii.charge_begin_date, '%Y%m') >= #{charge_begin_month}
+			]]>  
+			</if>
+			<if test="contract_id != null and contract_id !=''">
+			   AND cii.contract_id = #{contract_id}
+			</if>
+			<if test="office_id != null and office_id !=''">
+			   AND cii.office_id = #{office_id}
+			</if>
+			<if test="dept != null and dept != '' ">
+		       AND cii.office_id in (${dept}) 
+			</if>
+			  GROUP BY cii.contract_id) U 
+			  LEFT JOIN charge_income_interface e 
+			    ON e.contract_id = U.contract_id 
+			    AND e.batch_no = U.batch_no
+			    AND DATE_FORMAT(e.charge_begin_date, '%Y%m') = DATE_FORMAT(U.charge_begin_date, '%Y%m')
+			GROUP BY U.contract_id 
+	</select>
+</mapper>

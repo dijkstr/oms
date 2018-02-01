@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<reportconfigs>
+	
+	<reportconfig key="orderCombineShow"  type="pdf" controller="" service="" >
+		<template key="orderCombineShow" template="orderCombine.ftl"/>
+	</reportconfig>
+	
+	<reportconfig key="chargeModelPrice"  type="pdf" controller="" service="" >
+		<template key="chargeModelPrice" template="chargeModelPrice.ftl"/>
+	</reportconfig>
+	
+	<reportconfig key="orderValidation"  type="xlsx" controller="orderValidationController" service="detailReportService" >
+		<template key="orderValidation" template="合同校验表.xml" name="合同校验表"/>
+	</reportconfig>
+</reportconfigs>

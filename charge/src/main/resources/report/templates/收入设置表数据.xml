@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<columns>
+	<column header="所属部门" type="string" field="order_source"/>
+	<column header="协同合同编号" type="string" field="hs_contract_id"/>
+	<column header="收入开始日期" type="string" field="income_start_date" />
+	<column header="收入结束日期" type="string" field="income_end_date" />
+	<column header="费用类型" type="string" field="payment_type" />
+	<column header="协同产品编号" type="string" field="hs_product_id" />
+	<column header="协同销售产品编号" type="string" field="product_sale_id" />
+	<column header="产品名称" type="string" field="product_name" />
+	<column header="拆分金额" type="number" field="split_amount" format="#,##0.########"/>
+	<column header="拆分比例(%)" type="number" field="split_ratio" format="#,##0.########"/>
+</columns>

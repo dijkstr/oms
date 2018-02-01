@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<columns>
+	<column header="明细行号" type="string" field="detailid" />
+	<column header="协同合同编号" type="string" field="contract_id"/>
+	<column header="协同客户编号" type="string" field="customer_id" />
+	<column header="协同客户名称" type="string" field="user_name" />
+	<column header="协同销售产品编号" type="string" field="product_id" />
+	<column header="协同销售产品名称" type="string" field="product_name" />
+	<column header="计费开始时间" type="string" field="charge_begin_date" />
+	<column header="计费结束时间" type="string" field="charge_end_date" />
+	<column header="固定费用类型" type="string" field="payment_type" />
+	<column header="显示名称" type="string" field="display_name" />
+	<column header="本期累计收入" type="number" field="finance_current_income" format="#,##0.########"/>
+</columns>
